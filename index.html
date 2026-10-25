@@ -1,0 +1,2491 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>百科盒 BaikeBox</title>
+<style>
+  :root {
+    --ink: #2b2620;
+    --ink-light: #6f675c;
+    --paper: #f6f2e7;
+    --card: #fffdf6;
+    --red: #a4342a;
+    --red-soft: #c8554a;
+    --gold: #b98a2f;
+    --blue: #5f7d95;
+    --line: #e4dcc8;
+    --mark: #ffe9a8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", sans-serif;
+    background: var(--paper);
+    background-image: radial-gradient(#e9e2cf 0.8px, transparent 0.8px);
+    background-size: 22px 22px;
+    color: var(--ink);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; padding: 32px 18px 60px; }
+
+  header { text-align: center; margin-bottom: 18px; position: relative; }
+  .title-row { display: flex; align-items: center; justify-content: center; gap: 14px; }
+  h1 {
+    font-family: "KaiTi", "STKaiti", "Noto Serif SC", serif;
+    font-size: 40px; letter-spacing: 10px; text-indent: 10px;
+    color: var(--ink); font-weight: 700;
+  }
+  .seal {
+    width: 44px; height: 44px; border-radius: 8px;
+    background: var(--red); color: #fff8ec;
+    font-family: "KaiTi", "STKaiti", serif; font-size: 26px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 2px 3px 0 rgba(164,52,42,.25);
+    transform: rotate(4deg);
+  }
+  .stats { margin-top: 10px; color: var(--ink-light); font-size: 13px; letter-spacing: 1px; }
+  .stats b { color: var(--red); font-weight: 600; }
+
+  .hbtns { position: absolute; top: -8px; right: 0; display: flex; gap: 8px; }
+  .hbtns button {
+    background: var(--card); border: 1.5px solid var(--line);
+    border-radius: 20px; padding: 8px 14px;
+    font-size: 13.5px; color: var(--ink-light); letter-spacing: 1px;
+  }
+  .hbtns button:hover { border-color: var(--gold); color: var(--gold); }
+  #favBtn .n {
+    display: inline-block; min-width: 18px; text-align: center;
+    background: var(--red); color: #fff8ec; border-radius: 10px;
+    font-size: 11.5px; padding: 1px 5px; margin-left: 2px; font-weight: 600;
+  }
+
+  /* 词典切换标签 */
+  .tabs { display: flex; justify-content: center; gap: 6px; margin: 16px 0 18px; }
+  .tab {
+    background: none; padding: 8px 22px; font-size: 16.5px;
+    font-family: "KaiTi", "STKaiti", serif; letter-spacing: 3px;
+    color: var(--ink-light); border-bottom: 2.5px solid transparent; border-radius: 6px 6px 0 0;
+    transition: color .25s, border-bottom-color .25s, transform .2s;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--red); font-weight: 700; border-bottom-color: var(--red); transform: translateY(-1px); }
+  /* 页签切换动画：内容淡入上滑级联 */
+  @keyframes tabIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .tab-fade { animation: tabIn .38s ease both; }
+  @media (prefers-reduced-motion: reduce) {
+    .tab-fade { animation: none; }
+    .tab { transition: none; }
+  }
+
+  .searchbar { display: flex; gap: 10px; margin-bottom: 10px; }
+  .qwrap { position: relative; flex: 1; display: flex; }
+  #q {
+    flex: 1; font-size: 17px; padding: 13px 40px 13px 16px;
+    border: 2px solid var(--line); border-radius: 10px;
+    background: var(--card); color: var(--ink); outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  #qClear {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; padding: 4px 5px;
+    font-size: 14px; line-height: 1; cursor: pointer; color: #b3a992;
+    opacity: 0; transition: opacity .25s ease, color .15s;
+  }
+  .qwrap:hover #q:not(:placeholder-shown) + #qClear { opacity: 1; }
+  #qClear:hover { color: var(--red); }
+  #q:focus { border-color: var(--red-soft); box-shadow: 0 0 0 3px rgba(200,85,74,.12); }
+  #q::placeholder { color: #b3a992; }
+  button {
+    border: none; border-radius: 10px; cursor: pointer;
+    font-size: 15px; padding: 0 20px; white-space: nowrap;
+    transition: transform .08s, filter .15s;
+  }
+  button:active { transform: scale(.96); }
+  #go { background: var(--red); color: #fff8ec; font-weight: 600; letter-spacing: 2px; }
+  #go:hover { filter: brightness(1.08); }
+  #random { background: var(--card); border: 2px solid var(--line); color: var(--ink-light); }
+  #random:hover { border-color: var(--gold); color: var(--gold); }
+
+  .hint { text-align: center; color: #a2987f; font-size: 12.5px; margin-bottom: 22px; }
+  .hint code { background: #efe8d4; border-radius: 4px; padding: 1px 6px; font-family: Consolas, monospace; }
+  .lchip {
+    display: inline-block; background: #efe8d4; color: #82724c;
+    font-size: 12.5px; padding: 4px 12px; border-radius: 14px;
+    text-decoration: none;
+  }
+  .lchip:hover { background: #e8dfc8; color: #82724c; }
+
+  .star {
+    background: none; border: none; padding: 0 2px;
+    font-size: 17px; line-height: 1; color: #cfc4a6;
+  }
+  .star:hover { color: var(--gold); transform: scale(1.15); }
+  .star.on { color: #e8a020; }
+
+  /* 考试标签 */
+  .chip {
+    display: inline-block; font-size: 11px; border-radius: 4px;
+    background: #efe8d4; color: #82724c; padding: 1px 6px; margin: 0 4px 0 0;
+    white-space: nowrap; vertical-align: 1px;
+  }
+  .chip.r-high { background: #f5d9d3; color: #a4342a; }
+  .chip.r-mid { background: #f3e7c3; color: #8a6d1f; }
+  .chip.r-low { background: #dde8d4; color: #49653f; }
+
+  /* 控糖计算器 */
+  #calcWrap { margin-top: 16px; }
+  .calc-card { margin-bottom: 24px; }
+  .calc-row { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0 4px; align-items: center; }
+  .calc-row label { font-size: 13.5px; color: var(--ink-light); display: flex; align-items: center; gap: 6px; }
+  .calc-row input, .calc-row select {
+    border: 1.5px solid var(--line); border-radius: 8px; padding: 8px 10px;
+    font-size: 15px; background: var(--card); color: var(--ink); width: 100px; outline: none;
+    font-family: inherit;
+  }
+  .calc-row input:focus, .calc-row select:focus { border-color: var(--red-soft); }
+  #calcBtn { background: var(--red); color: #fff8ec; padding: 9px 18px; font-size: 14px; letter-spacing: 2px; }
+  .calc-result { margin-top: 12px; font-size: 14.5px; line-height: 2; color: #4c453b; }
+  .calc-result .num { color: var(--red); font-size: 24px; font-weight: 700; }
+  .calc-result .st { color: var(--red-soft); font-weight: 700; }
+  .calc-result .advice { display: block; color: var(--ink-light); }
+  .calc-result .warn { display: block; margin-top: 6px; color: #b3a98f; font-size: 12px; }
+
+  /* 菜系筛选条 */
+  .fbar { margin: 0 0 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  .fchip { cursor: pointer; font-size: 12.5px; padding: 4px 12px; border-radius: 14px; margin: 0; }
+  .fchip:hover { background: #e8dfc8; }
+  .fchip.active { background: var(--red); color: #fff8ec; }
+
+  /* 份量选择条（菜谱页顶部，全局生效） */
+  .pbar { margin: -6px 0 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+  #extra:not(:empty) { margin-bottom: 14px; }   /* 工具条下方给卡片凸出的标签留空间 */
+  .plab { font-size: 13.5px; color: var(--ink-light); letter-spacing: 1px; margin-right: 2px; }
+  .pbtn {
+    background: #efe8d4; border: none; color: #82724c;
+    font-size: 12.5px; padding: 4px 12px; border-radius: 14px;
+  }
+  .pbtn:hover { background: #e8dfc8; }
+  .pbtn.on { background: var(--red); color: #fff8ec; }
+  .pnote { color: #a2987f; font-size: 12px; margin-left: 4px; }
+  .rsel {
+    border: 1.5px solid var(--line); border-radius: 10px; padding: 5px 8px;
+    font-size: 13px; background: var(--card); color: var(--ink); outline: none; font-family: inherit;
+  }
+  .rsel:focus { border-color: var(--red-soft); }
+  .dbtn {
+    margin-left: auto; background: var(--red); border: 1.5px solid var(--red);
+    color: #fff8ec; font-size: 12.5px; padding: 4px 14px; border-radius: 14px; letter-spacing: 1px;
+  }
+  .dbtn:hover { filter: brightness(1.08); }
+  .padd {
+    margin-left: 10px; background: none; border: 1.5px solid var(--line);
+    color: var(--ink-light); font-size: 12px; padding: 2px 10px; border-radius: 12px;
+    white-space: nowrap;
+  }
+  .padd:hover { border-color: var(--red); color: var(--red); }
+  .chip.kcal { background: #f5d9d3; color: #a4342a; }
+
+  /* 英汉词典增强：朗读按钮 / 可点词块 */
+  .spk { background: none; border: none; padding: 0 2px; font-size: 14px; cursor: pointer; }
+  .spk:hover { transform: scale(1.18); }
+  .word .spk { font-size: 19px; margin-left: 10px; vertical-align: 10px; }
+  .wchip {
+    display: inline-block; font-size: 11px; border-radius: 4px; cursor: pointer;
+    background: #efe8d4; color: #82724c; padding: 1px 6px; margin: 0 4px 2px 0; border: none;
+  }
+  .wchip:hover { background: var(--red); color: #fff8ec; }
+  /* 成语接龙 */
+  .jl-chain { font-size: 15px; line-height: 2.2; margin-bottom: 4px; }
+  .jl-arrow { color: #c9bfa4; margin: 0 4px; }
+  .jl-need { margin: 8px 0; font-size: 14.5px; color: #4c453b; }
+  .jl-char {
+    font-family: "KaiTi", "STKaiti", serif; font-size: 30px;
+    color: var(--red); font-weight: 700; margin: 0 2px;
+  }
+  .jl-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 4px; }
+  .jl-hints { margin: 6px 0 2px; line-height: 2.1; color: #82724c; }
+  .jl-note { margin-top: 8px; color: var(--red); font-size: 13.5px; }
+  .jl-head {
+    background: none; border: 1px dashed #c9bfa4; color: #82724c;
+    font-size: 11px; padding: 1px 6px; border-radius: 10px; cursor: pointer; margin-left: 3px;
+  }
+  .jl-head:hover { border-color: var(--red); color: var(--red); background: #fbf3e4; }
+  .jl-link.jl-me { border: 1px solid var(--red); color: var(--red); background: #fffdf6; }
+  .jl-link.jl-me:hover { background: var(--red); color: #fff8ec; }
+  .fav-top .cnt { margin-right: 10px; color: var(--ink-light); font-size: 13px; }
+  .fav-top .cnt b { color: var(--red); }
+  .wexp {
+    margin: 6px 0 2px; padding: 8px 12px;
+    background: #f7f1df; border: 1px dashed var(--line); border-radius: 8px;
+    font-size: 13.5px; line-height: 1.8;
+  }
+  .wexp-head { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; }
+  .wexp-head b { font-family: Georgia, "Times New Roman", serif; font-size: 15px; }
+  .wexp-head .p { color: var(--gold); font-size: 12px; }
+  .wexp-x { margin-left: auto; background: none; border: none; color: #a2987f; cursor: pointer; font-size: 13px; padding: 0 4px; }
+  .wexp-x:hover { color: var(--red); }
+  .wexp .txt { color: #4c453b; }
+
+  /* 灯箱档位缩放 */
+  #imgZoom img { transition: transform .18s ease; }
+  .zoom-hint {
+    position: absolute; bottom: 14px; left: 0; width: 100%; text-align: center;
+    color: rgba(255,248,236,.85); font-size: 12.5px; letter-spacing: 1px; pointer-events: none;
+  }
+  .zoom-x {
+    position: absolute; top: 14px; right: 18px;
+    background: rgba(255,248,236,.12); border: 1px solid rgba(255,248,236,.4);
+    color: #fff8ec; font-size: 15px; padding: 5px 12px; border-radius: 16px; cursor: pointer;
+  }
+  .zoom-x:hover { background: rgba(255,248,236,.28); }
+
+  /* 冰箱模式（按食材找菜） */
+  .fbtn {
+    background: var(--card); border: 1.5px solid var(--line); color: var(--ink-light);
+    font-size: 12.5px; padding: 4px 14px; border-radius: 14px; letter-spacing: 1px;
+  }
+  .fbtn:hover { border-color: var(--gold); color: var(--gold); }
+  .fbtn.on { background: #7ba05b; border-color: #7ba05b; color: #fff8ec; }
+  .ingbar { margin: 0 0 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .ingbar #ingFilter {
+    flex: 1; min-width: 140px; border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 8px 12px; font-size: 14px; background: var(--card); color: var(--ink);
+    outline: none; font-family: inherit;
+  }
+  .ingbar #ingFilter:focus { border-color: var(--red-soft); }
+  .ingchips { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+  .gchip {
+    cursor: pointer; font-size: 12.5px; padding: 4px 12px; border-radius: 14px; margin: 0;
+    background: #efe8d4; border: none; color: #82724c;
+  }
+  .gchip:hover { background: #e8dfc8; }
+  .gchip.active { background: var(--red); color: #fff8ec; }
+  .gchip i { font-style: normal; color: #b3a98f; margin-left: 3px; font-size: 11px; }
+  .gchip.active i { color: #f3d9c9; }
+  .ingnote { color: #a2987f; font-size: 12px; align-self: center; }
+
+  /* 今日控糖 */
+  .dia-date { margin-right: auto; color: var(--ink-light); font-size: 13px; }
+  .dia-budget { font-size: 13.5px; color: var(--ink-light); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .dia-budget input {
+    border: 1.5px solid var(--line); border-radius: 8px; padding: 6px 8px;
+    font-size: 14px; background: var(--card); color: var(--ink); width: 90px; outline: none; font-family: inherit;
+  }
+  .dia-budget input:focus { border-color: var(--red-soft); }
+  .dia-budget button {
+    background: var(--card); border: 1.5px solid var(--line); color: var(--ink-light);
+    font-size: 13px; padding: 6px 12px; border-radius: 8px;
+  }
+  .dia-budget button:hover { border-color: var(--gold); color: var(--gold); }
+  .dia-big { font-size: 14.5px; margin: 10px 0 8px; color: #4c453b; }
+  .dia-big .num { color: var(--red); font-size: 24px; font-weight: 700; }
+  .dia-track { height: 10px; background: #efe8d4; border-radius: 6px; overflow: hidden; }
+  .dia-fill { height: 100%; width: 0; background: #7ba05b; border-radius: 6px; transition: width .3s; }
+  .dia-fill.warn { background: #c89a3f; }
+  .dia-fill.hot { background: var(--red); }
+  .dia-meal { margin-top: 16px; }
+  .dia-meal h3 {
+    display: inline; font-family: "KaiTi", "STKaiti", serif;
+    font-size: 17.5px; letter-spacing: 2px; margin-right: 8px;
+  }
+  .dia-meal .mtot { color: #a2987f; font-size: 12.5px; }
+  .dia-item {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 14px; color: #4c453b; padding: 5px 0;
+    border-bottom: 1px dashed #e5dcc3;
+  }
+  .dia-item .k { margin-left: auto; color: #82724c; font-size: 13px; white-space: nowrap; }
+  .dia-x { background: none; border: none; color: #c2b696; font-size: 13px; padding: 2px 4px; }
+  .dia-x:hover { color: var(--red); }
+  .dia-add { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .mchips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dia-add input {
+    flex: 1; border: 1.5px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; font-size: 14px; background: var(--card); color: var(--ink);
+    outline: none; font-family: inherit; min-width: 0;
+  }
+  .dia-add input:focus { border-color: var(--red-soft); }
+  .dia-add button {
+    background: var(--card); border: 1.5px solid var(--line); color: var(--ink-light);
+    font-size: 13px; padding: 0 14px; border-radius: 8px;
+  }
+  .dia-add button:hover { border-color: var(--gold); color: var(--gold); }
+  .dia-note { margin-top: 16px; color: #b3a98f; font-size: 12px; line-height: 1.8; }
+
+  /* 图片放大灯箱 */
+  #imgZoom {
+    display: none; position: fixed; inset: 0; z-index: 90;
+    background: rgba(43,38,32,.78); cursor: zoom-out;
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  #imgZoom.show { display: flex; }
+  #imgZoom img {
+    max-width: 96vw; max-height: 96vh;
+    border-radius: 10px; border: 1px solid var(--line);
+    box-shadow: 0 12px 40px rgba(40,30,10,.45); background: #efe8d4;
+  }
+  .dia-menu {
+    margin-top: 16px; background: #fbf6e8; border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 16px;
+  }
+  .dia-menu-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .dia-menu-top h3 {
+    margin-right: auto; font-family: "KaiTi", "STKaiti", serif;
+    font-size: 17px; letter-spacing: 2px;
+  }
+  .dia-menu-top button {
+    background: var(--card); border: 1.5px solid var(--line); color: var(--ink-light);
+    font-size: 12.5px; padding: 5px 10px; border-radius: 8px;
+  }
+  .dia-menu-top button:hover { border-color: var(--gold); color: var(--gold); }
+  .dia-meal-line { display: flex; align-items: baseline; gap: 8px; font-size: 13.5px; color: #4c453b; padding: 3px 0; }
+  .dia-meal-line b { color: var(--red-soft); letter-spacing: 1px; }
+  .dia-meal-line .mk { margin-left: auto; color: #82724c; font-size: 12.5px; white-space: nowrap; }
+  .dia-menu-total {
+    margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e0d6bb;
+    font-size: 13px; color: var(--red);
+  }
+  .dia-menu-empty { color: #a2987f; font-size: 13px; padding: 4px 0; }
+
+  /* 今日/随机卡片 */
+  .feature-card {
+    display: flow-root;
+    background: linear-gradient(160deg, #fffdf6 0%, #fbf6e8 100%);
+    border: 1px solid var(--line); border-radius: 14px;
+    padding: 24px 26px; margin-bottom: 24px; position: relative;
+    box-shadow: 0 4px 14px rgba(120,100,60,.08);
+  }
+  .feature-card .tag {
+    position: absolute; top: -11px; left: 20px;
+    background: var(--red); color: #fff8ec; font-size: 12px;
+    padding: 3px 12px; border-radius: 20px; letter-spacing: 2px;
+  }
+  .feature-card .star { position: absolute; top: 14px; right: 16px; font-size: 22px; }
+  .feature-card .word {
+    font-family: "KaiTi", "STKaiti", serif; font-size: 34px; font-weight: 700;
+    letter-spacing: 6px; margin: 6px 0 4px;
+  }
+  .feature-card .word.en { font-family: Georgia, "Times New Roman", serif; letter-spacing: 0; font-size: 32px; }
+  .feature-card .py { color: var(--gold); font-size: 15px; margin-bottom: 12px; letter-spacing: .5px; }
+  .feature-card .sec { margin-top: 10px; font-size: 14.5px; line-height: 1.9; }
+  .feature-card .sec .lab {
+    display: inline-block; min-width: 44px; color: #fff; background: var(--gold);
+    font-size: 12px; text-align: center; border-radius: 4px; padding: 1px 0; margin-right: 10px;
+  }
+  .feature-card .sec.der .lab { background: var(--red-soft); }
+  .feature-card .sec.exa .lab { background: #7a8b6f; }
+  .feature-card .sec.exc .lab { background: var(--blue); }
+  .feature-card .sec .txt { color: #4c453b; }
+
+  /* 搜索结果 */
+  #meta { color: var(--ink-light); font-size: 13.5px; margin: 0 2px 12px; }
+  #meta b { color: var(--red); }
+  .item {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    margin-bottom: 10px; overflow: hidden; cursor: pointer;
+    transition: box-shadow .15s, border-color .15s;
+  }
+  .item:hover { border-color: #d8b98a; box-shadow: 0 3px 10px rgba(120,100,60,.1); }
+  .item .head { display: flex; align-items: baseline; gap: 12px; padding: 13px 18px; }
+  .rthumb {
+    align-self: center; flex: none;
+    width: 58px; height: 44px; object-fit: cover;
+    border-radius: 6px; border: 1px solid var(--line);
+    background: #efe8d4;
+  }
+  .dwrap { position: relative; float: right; width: 46%; margin: 4px 0 8px 14px; }
+  .dwrap.big { float: none; width: 100%; margin: 10px 0 2px; }
+  .dthumb {
+    display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover;
+    border-radius: 10px; border: 1px solid var(--line);
+    background: #efe8d4; cursor: zoom-in;
+  }
+  .dsmall {
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(43,38,32,.55); border: 1px solid rgba(255,248,236,.5);
+    color: #fff8ec; font-size: 11.5px; padding: 3px 10px; border-radius: 12px; cursor: pointer;
+    letter-spacing: 1px;
+  }
+  .dsmall:hover { background: rgba(43,38,32,.85); }
+  @media (max-width: 560px) {
+    .dthumb { aspect-ratio: 4 / 3; }
+    .dwrap { float: none; width: 80%; margin: 10px auto 2px; }
+    .dwrap.big { width: 100%; margin: 10px 0 2px; }
+  }
+  .item .w { font-family: "KaiTi", "STKaiti", serif; font-size: 21px; font-weight: 700; letter-spacing: 2px; }
+  .item .w.en { font-family: Georgia, "Times New Roman", serif; letter-spacing: 0; font-size: 20px; }
+  .item .p { color: var(--gold); font-size: 13px; }
+  .item .brief {
+    color: var(--ink-light); font-size: 13.5px; margin-left: auto;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42%;
+  }
+  .item .arrow { color: #c9bfa4; font-size: 12px; transition: transform .2s; }
+  .item.open .arrow { transform: rotate(90deg); }
+  .item .body { display: none; padding: 2px 18px 16px; border-top: 1px dashed var(--line); }
+  .item.open .body { display: flow-root; }
+  .item .body .sec { margin-top: 11px; font-size: 14.5px; line-height: 1.85; }
+  .lab {
+    display: inline-block; min-width: 42px; text-align: center; color: #fff;
+    font-size: 12px; border-radius: 4px; padding: 1px 0; margin-right: 10px;
+  }
+  .lab.l-exp { background: var(--gold); }
+  .lab.l-der { background: var(--red-soft); }
+  .lab.l-exa { background: #7a8b6f; }
+  .lab.l-exc { background: var(--blue); }
+  .item .body .txt, .fc-face .txt { color: #4c453b; }
+  .none { text-align: center; color: var(--ink-light); padding: 40px 0; font-size: 15px; }
+  mark { background: var(--mark); color: inherit; padding: 0 1px; border-radius: 3px; }
+
+  #more {
+    display: none; margin: 14px auto 0; background: var(--card);
+    border: 2px solid var(--line); color: var(--ink-light); padding: 10px 26px;
+  }
+  #more:hover { border-color: var(--gold); color: var(--gold); }
+
+  footer { text-align: center; color: #b3a98f; font-size: 12px; margin-top: 40px; line-height: 1.8; }
+
+  /* 收藏本弹层 */
+  #favOverlay, #diaOverlay {
+    display: none; position: fixed; inset: 0; z-index: 50;
+    background: rgba(43,38,32,.45);
+    overflow-y: auto; padding: 30px 16px;
+  }
+  #favOverlay.show, #diaOverlay.show { display: block; }
+  .fav-panel {
+    max-width: 660px; margin: 0 auto;
+    background: var(--paper);
+    background-image: radial-gradient(#ece4cf 0.8px, transparent 0.8px);
+    background-size: 22px 22px;
+    border: 1px solid var(--line); border-radius: 16px;
+    padding: 20px 24px 28px;
+    box-shadow: 0 12px 40px rgba(40,30,10,.25);
+  }
+  .fav-top { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .fav-top h2 {
+    font-family: "KaiTi", "STKaiti", serif; font-size: 23px; letter-spacing: 3px;
+    margin-right: auto; font-weight: 700;
+  }
+  .btab {
+    background: var(--card); border: 1.5px solid var(--line); color: var(--ink-light);
+    font-size: 13px; padding: 7px 13px; border-radius: 18px;
+  }
+  .btab b { color: var(--red); font-weight: 600; }
+  .btab.active { border-color: var(--red); color: var(--red); font-weight: 600; }
+  .fav-head { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .fav-head .cnt { color: var(--ink-light); font-size: 13px; margin-right: auto; }
+  .fav-head button, .fc-nav button {
+    background: var(--card); border: 1.5px solid var(--line);
+    color: var(--ink-light); font-size: 13px; padding: 8px 14px; border-radius: 8px;
+  }
+  .fav-head button:hover:not(:disabled), .fc-nav button:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+  .fav-head button:disabled, .fc-nav button:disabled { opacity: .4; cursor: not-allowed; }
+  .fav-head button.primary { background: var(--red); border-color: var(--red); color: #fff8ec; font-weight: 600; }
+  .fav-head button.primary:hover:not(:disabled) { color: #fff8ec; filter: brightness(1.08); border-color: var(--red); }
+  .xbtn { background: none; border: none; color: #a2987f; font-size: 17px; padding: 4px 8px; }
+  .xbtn:hover { color: var(--red); }
+
+  /* 复习卡片 */
+  .review-info { text-align: center; color: var(--ink-light); font-size: 13px; margin-bottom: 14px; }
+  .review-info b { color: var(--red); }
+  .fc { perspective: 1400px; height: 360px; cursor: pointer; margin-bottom: 16px; }
+  .fc-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .45s; }
+  .fc.flipped .fc-inner { transform: rotateY(180deg); }
+  .fc-face {
+    position: absolute; inset: 0;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    background: linear-gradient(160deg, #fffdf6 0%, #fbf6e8 100%);
+    border: 1px solid var(--line); border-radius: 14px;
+    padding: 26px 28px; overflow-y: auto;
+    box-shadow: 0 4px 14px rgba(120,100,60,.08);
+  }
+  .fc-back { transform: rotateY(180deg); }
+  .fc-face .star { position: absolute; top: 12px; right: 14px; font-size: 20px; }
+  .fc-front .word {
+    font-family: "KaiTi", "STKaiti", serif; font-size: 40px; font-weight: 700;
+    letter-spacing: 8px; text-align: center; margin-top: 84px; line-height: 1.4;
+  }
+  .fc-front .word.en { font-family: Georgia, "Times New Roman", serif; letter-spacing: 1px; font-size: 38px; }
+  .fc-front .py { text-align: center; color: var(--gold); margin-top: 12px; letter-spacing: 1px; }
+  .fc-front .flip-hint { position: absolute; bottom: 16px; left: 0; width: 100%; text-align: center; color: #b3a98f; font-size: 12.5px; }
+  .fc-face .sec { margin-top: 12px; font-size: 14.5px; line-height: 1.85; }
+  .fc-face .lab { margin-right: 10px; }
+  .fc-nav { display: flex; gap: 10px; justify-content: center; }
+  .fc-nav button { font-size: 14px; padding: 9px 20px; }
+
+  @media (max-width: 560px) {
+    h1 { font-size: 30px; letter-spacing: 6px; }
+    .item .brief { display: none; }
+    .searchbar { flex-wrap: wrap; }
+    #go, #random { padding: 11px 16px; }
+    #random { flex: 1; }
+    .hbtns { position: static; justify-content: center; margin-top: 12px; }
+    .fc { height: 400px; }
+    .fc-front .word { margin-top: 60px; }
+    .fav-panel { padding: 14px 12px 20px; }
+    .tab { padding: 8px 14px; font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="title-row">
+      <h1>百科盒</h1>
+      <div class="seal">典</div>
+    </div>
+    <p class="stats" id="stats">…</p>
+    <div class="hbtns">
+      <button id="favBtn" title="我的收藏">📖 收藏本 <span class="n" id="favCount">0</span></button>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <div class="searchbar">
+    <span class="qwrap">
+      <input id="q" type="text" autofocus autocomplete="off">
+      <button id="qClear" title="清空搜索内容">❌</button>
+    </span>
+    <button id="go">查 询</button>
+    <button id="random" title="随手翻一条">🎲 随机</button>
+  </div>
+  <p class="hint" id="hint"></p>
+
+  <div id="extra"></div>
+  <div id="card"></div>
+  <div id="meta"></div>
+  <div id="results"></div>
+  <button id="more">显示更多 ↓</button>
+
+  <footer>成语数据：chinese-xinhua · 英汉数据：ECDICT · 花语菜谱为常见整理 · 含糖量为常见近似值<br>纯离线双击即用 · 收藏保存在本机浏览器中 · 健康信息仅供参考，不构成医疗建议</footer>
+</div>
+
+<!-- 收藏本弹层 -->
+<div id="favOverlay">
+  <div class="fav-panel" id="favPanel"></div>
+</div>
+
+<!-- 今日控糖弹层 -->
+<div id="diaOverlay">
+  <div class="fav-panel" id="diaPanel"></div>
+</div>
+
+<!-- 图片放大 -->
+<div id="imgZoom"><img id="imgZoomImg" alt=""><div class="zoom-hint" id="zoomHint"></div><button class="zoom-x" id="zoomX" title="关闭">✕ 关闭</button></div>
+
+<script src="data.js"></script>
+<script src="eng.js"></script>
+<script src="eng_sent.js"></script>
+<script src="flowers.js"></script>
+<script src="recipes.js"></script>
+<script src="sugar.js"></script>
+<script src="terms.js"></script>
+<script src="psy.js"></script>
+<script src="rare.js"></script>
+<script src="decomp.js"></script>
+<script src="thumbs.js"></script>
+<script>
+(function () {
+  var PAGE = 100;
+  var P_LABEL = { plate: '一盘', bowl: '一碗', small: '一小碗' };
+  var PORTION = 'plate';
+  var FRIDGE_MODE = false, FRIDGE_SEL = {};
+  try {
+    var savedP = localStorage.getItem('recipe_portion');
+    if (savedP && P_LABEL[savedP]) PORTION = savedP;
+  } catch (e) {}
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function normPy(s) {
+    return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
+  }
+  function rxQuote(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  // 不区分大小写高亮
+  function hl(text, rawQ, cls) {
+    text = esc(text);
+    if (!rawQ) return text;
+    try {
+      return text.replace(new RegExp(rxQuote(esc(rawQ)), 'gi'), function (m) {
+        return '<mark' + (cls ? ' class="' + cls + '"' : '') + '>' + m + '</mark>';
+      });
+    } catch (e) { return text; }
+  }
+  function toBr(s) { return esc(s).replace(/\n/g, '<br>'); }
+  function firstLine(s, n) {
+    var i = s.indexOf('\n');
+    var line = i >= 0 ? s.slice(0, i) : s;
+    return line.length > n ? line.slice(0, n) + '…' : line;
+  }
+
+  /* ================= 词典定义 ================= */
+  var IDIOMS = window.IDIOMS || [];
+  var ENG = window.ENGWORDS || [];
+  var FLOWERS = window.FLOWERS || [];
+  var RECIPES = window.RECIPES || [];
+  var FOODS = window.SUGARFOODS || [];
+  var TERMS = window.TERMS || [];
+  var TERM_F = '';
+  var PSY = window.PSY || [];
+  var PSY_F = '';
+  var RARE = window.RARECHARS || [];
+  var ENG_F = '';
+  var ENG_PH = ENG.filter(function (it) { return it[0].indexOf(' ') >= 0; }).length;
+  function isPhrase(it) { return it[0].indexOf(' ') >= 0; }
+  var RARE_F = { r: '', s: 0, str: '', p1: '', p2: '' };
+  var DECOMP = window.RARE_DECOMP || {};
+  var DSET = window.RARE_DSET || {};
+  function partOk(part, p) {
+    if (Array.isArray(part)) {
+      for (var i = 1; i < part.length; i++) {
+        if (partOk(part[i], p)) return true;
+      }
+      return false;
+    }
+    return part === p || (!!DSET[part] && DSET[part].indexOf(p) >= 0);
+  }
+  function rareScore(it) {
+    if (RARE_F.r && it[2] !== RARE_F.r) return 0;
+    if (RARE_F.s && it[3] !== RARE_F.s) return 0;
+    var ps = [RARE_F.p1, RARE_F.p2, RARE_F.p3];
+    if (!ps[0] && !ps[1] && !ps[2]) return 1;
+    var d = DECOMP[it[0]];
+    var set = DSET[it[0]] || '';
+    var loose = 0;
+    for (var k = 0; k < 3; k++) {
+      if (ps[k] && set.indexOf(ps[k]) >= 0) loose++;
+    }
+    if (!d) return loose > 0 ? 1 : 0;
+    var pos = 0;
+    for (var i = 0; i < 3; i++) {
+      if (ps[i] && d.length > i + 1 && partOk(d[i + 1], ps[i])) pos++;
+    }
+    var structOk = !RARE_F.str || d[0] === RARE_F.str;
+    if (structOk && pos === 3 && ps[2]) return 4;   // 结构+三位置全对
+    if (structOk && pos === 2 && !ps[2]) return 4;  // 结构+两位置全对
+    if (pos === 2 && !ps[2]) return 3;              // 两位置全对，结构不同
+    if (structOk && pos >= 1) return 2;             // 结构对，部分位置对
+    return loose > 0 ? 1 : 0;                        // 只是包含部件
+  }
+  var RARE_RAD = (function () {
+    var rc = {};
+    RARE.forEach(function (it) { if (it[2]) rc[it[2]] = (rc[it[2]] || 0) + 1; });
+    return Object.keys(rc).sort(function (a, b) { return rc[b] - rc[a]; });
+  })();
+  var THUMB_MAPS = { recipe: window.RECIPE_THUMBS || {}, flower: window.FLOWER_THUMBS || {}, food: window.FOOD_THUMBS || {} };
+  function thumbImg(k, name, cls) {
+    var map = THUMB_MAPS[k];
+    var src = map ? map[name] : '';
+    if (!src) return '';
+    var img = '<img class="' + cls + '" src="' + src + '" alt="' + esc(name) + '" loading="lazy"' +
+      (cls === 'dthumb' ? ' title="点击放大"' : '') + ' onerror="this.style.display=\'none\'">';
+    if (cls !== 'dthumb') return img;
+    return '<div class="dwrap">' + img +
+      '<button class="dsmall" title="还原为全宽大图">放 大</button></div>';
+  }
+
+  var EX_CN = { zk: '中考', gk: '高考', cet4: 'CET4', cet6: 'CET6', ky: '考研', toefl: 'TOEFL', ielts: '雅思', gre: 'GRE' };
+  function chips(tagStr, limit) {
+    if (!tagStr) return '';
+    var arr = tagStr.split(' ');
+    if (limit) arr = arr.slice(0, limit);
+    return arr.map(function (t) { return '<span class="chip">' + (EX_CN[t] || t) + '</span>'; }).join('');
+  }
+
+  var IDIOM_PY = IDIOMS.map(function (it) { return normPy(it[1]); });
+  var ENG_LOW = ENG.map(function (it) { return it[0].toLowerCase(); });
+
+  /* ================= 英汉增强：朗读 / 关联词 / 拼写相近 / 例句 ================= */
+  function speak(word) {
+    try {
+      if (!window.speechSynthesis) return;
+      var u = new SpeechSynthesisUtterance(word);
+      u.lang = 'en-US';
+      u.rate = 0.85;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function ed(a, b, cap) {          // 编辑距离，超过 cap 提前退出
+    if (a === b) return 0;
+    var m = a.length, n = b.length, i, j;
+    var prev = [], cur = [];
+    for (j = 0; j <= n; j++) prev[j] = j;
+    for (i = 1; i <= m; i++) {
+      cur[0] = i;
+      var best = i;
+      for (j = 1; j <= n; j++) {
+        var c = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + c);
+        if (cur[j] < best) best = cur[j];
+      }
+      if (best > cap) return cap + 1;
+      for (j = 0; j <= n; j++) prev[j] = cur[j];
+    }
+    return prev[n];
+  }
+  function engFamily(word) {        // 关联词：同词头（词根家族），按词频序
+    var pre = word.slice(0, Math.max(4, word.length - 2));
+    var out = [];
+    for (var i = 0; i < ENG.length && out.length < 10; i++) {
+      if (ENG_LOW[i] !== word && ENG_LOW[i].indexOf(pre) === 0) out.push(ENG[i][0]);
+    }
+    return out;
+  }
+  function engSimilar(word) {       // 拼写相近：编辑距离 ≤ 1/2
+    var maxd = word.length <= 4 ? 1 : 2;
+    var out = [];
+    for (var i = 0; i < ENG.length && out.length < 8; i++) {
+      var w = ENG_LOW[i];
+      if (w === word || Math.abs(w.length - word.length) > maxd) continue;
+      if (ed(w, word, maxd) <= maxd) out.push(ENG[i][0]);
+    }
+    return out;
+  }
+  function wchip(w) { return '<button class="chip wchip" data-sw="' + esc(w) + '" title="点击展开释义，不跳转">' + esc(w) + '</button>'; }
+  function wexpHTML(word) {         // 原地展开某词的释义/例句，不离开当前页面
+    var idx = wordIdx.eng[word];
+    if (idx === undefined) return '';
+    var it = DICTS.eng.items[idx];
+    var ex = (window.ENG_SENT || {})[word];
+    var h = '<div class="wexp" data-for="' + esc(word) + '"><div class="wexp-head">' +
+      '<b>' + esc(it[0]) + '</b>' +
+      (it[1] ? '<span class="p">/' + esc(it[1]) + '/</span>' : '') +
+      '<button class="spk" data-w="' + esc(word) + '" title="朗读发音">🔊</button>' +
+      '<button class="wexp-x" title="收起">✕</button></div>' +
+      '<div class="txt">' + toBr(it[2]) + '</div>';
+    if (ex) {
+      var p = ex.split('\n');
+      h += '<div class="txt" style="color:#82724c">' + esc(p[0]) + (p[1] ? '<br>' + esc(p[1]) : '') + '</div>';
+    }
+    return h + '</div>';
+  }
+  function engExtraHTML(word) {
+    var h = '';
+    var ex = (window.ENG_SENT || {})[word];
+    if (ex) {
+      var parts = ex.split('\n');
+      h += '<div class="sec"><span class="lab l-exa">例 句</span><span class="txt">' + esc(parts[0]) +
+        (parts[1] ? '<br><span style="color:#82724c">' + esc(parts[1]) + '</span>' : '') + '</span></div>';
+    }
+    var fam = engFamily(word);
+    if (fam.length) h += '<div class="sec"><span class="lab l-exc">关联词</span>' + fam.map(wchip).join('') + '</div>';
+    var sim = engSimilar(word);
+    if (sim.length) h += '<div class="sec"><span class="lab l-der">拼写相近</span>' + sim.map(wchip).join('') + '</div>';
+    return h;
+  }
+  document.addEventListener('click', function (e) {   // 朗读（捕获阶段，避免触发行展开/翻卡）
+    var s = e.target.closest ? e.target.closest('.spk') : null;
+    if (s && s.dataset.w) { e.stopPropagation(); e.preventDefault(); speak(s.dataset.w); }
+  }, true);
+  document.addEventListener('click', function (e) {   // 点击关联词/相近词：原地展开，再点收起
+    if (!e.target.closest) return;
+    var x = e.target.closest('.wexp-x');
+    if (x) {
+      var w = x.closest('.wexp');
+      if (w) w.remove();
+      return;
+    }
+    var c = e.target.closest('.wchip');
+    if (!c || !c.dataset.sw) return;
+    e.stopPropagation();
+    var word = c.dataset.sw;
+    var sec = c.closest('.sec');
+    if (!sec) return;
+    var next = sec.nextElementSibling;
+    if (next && next.classList.contains('wexp') && next.getAttribute('data-for') === word) { next.remove(); return; }
+    var root = c.closest('.item') || c.closest('.feature-card') || c.closest('.fc-face') || document.body;
+    root.querySelectorAll('.wexp').forEach(function (n) { n.remove(); });
+    var html = wexpHTML(word);
+    if (html) sec.insertAdjacentHTML('afterend', html);
+  });
+
+  var DICTS = {
+    idiom: {
+      key: 'idiom', book: '📖', label: '成语', favFile: '成语收藏本',
+      items: IDIOMS, favKey: 'idiom_favs',
+      placeholder: '查成语、释义关键词，或拼音缩写（如 xycc）',
+      hint: '试试：<code>画蛇添足</code>（成语）· <code>形容刻苦</code>（释义）· <code>xycc</code>（拼音缩写）· 点 <code>☆</code> 收进收藏本',
+      emptyMsg: '没找到相关成语，换个关键词试试？',
+      countText: function () { return IDIOMS.length.toLocaleString() + ' 条成语'; },
+      extra: function () {
+        return '<div class="pbar"><button class="fbtn" id="jlToggle">🔗 成语接龙</button>' +
+          '<span class="pnote">系统自动出题，你往下接；接不上可以让系统帮忙</span></div>' +
+          '<div id="jlWrap" style="display:none"><div class="feature-card" id="jlCard"></div></div>';
+      },
+      afterExtra: function () {
+        var tg = document.getElementById('jlToggle');
+        if (tg) tg.addEventListener('click', function () {
+          var w = document.getElementById('jlWrap');
+          var open = w.style.display !== 'none';
+          w.style.display = open ? 'none' : '';
+          tg.classList.toggle('on', !open);
+          if (!open) jlInit();
+        });
+      },
+      score: function (it, i, q, nq, isAscii) {
+        var s = -1;
+        if (it[0] === q) s = 100;
+        else if (isAscii && it[5] === nq) s = 95;
+        else if (it[0].indexOf(q) === 0) s = 80;
+        else if (isAscii && IDIOM_PY[i] === nq) s = 78;
+        else if (it[0].indexOf(q) > 0) s = 60;
+        else if (isAscii && nq.length >= 2 && it[5].indexOf(nq) === 0) s = 50;
+        else if (it[3].indexOf(q) >= 0) s = 40;
+        else if (isAscii && nq.length >= 3 && IDIOM_PY[i].indexOf(nq) >= 0) s = 30;
+        else if (it[2].indexOf(q) >= 0) s = 20;
+        return s;
+      },
+      head: function (it, raw) {
+        return '<span class="w">' + hl(it[0], raw) + '</span>' +
+          '<span class="p">' + esc(it[1]) + '</span>' +
+          '<span class="brief">' + esc(firstLine(it[2], 40)) + '</span>';
+      },
+      body: function (it) {
+        return '<div class="sec"><span class="lab l-exp">释 义</span><span class="txt">' + esc(it[2]) + '</span></div>' +
+          (it[3] ? '<div class="sec"><span class="lab l-der">出 处</span><span class="txt">' + esc(it[3]) + '</span></div>' : '') +
+          (it[4] ? '<div class="sec"><span class="lab l-exa">例 句</span><span class="txt">' + esc(it[4]) + '</span></div>' : '');
+      },
+      front: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="py">' + esc(it[1]) + '</div>' +
+          '<div class="flip-hint">先自己回想意思，再点击卡片翻面</div>';
+      },
+      back: function (it) { return this.body(it); },
+      detail: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="py">' + esc(it[1]) + '</div>' +
+          '<div class="sec"><span class="lab">释 义</span><span class="txt">' + esc(it[2]) + '</span></div>' +
+          (it[3] ? '<div class="sec der"><span class="lab">出 处</span><span class="txt">' + esc(it[3]) + '</span></div>' : '') +
+          (it[4] ? '<div class="sec exa"><span class="lab">例 句</span><span class="txt">' + esc(it[4]) + '</span></div>' : '');
+      },
+      exportOne: function (it) {
+        var L = ['【' + it[0] + '】 ' + it[1], '　释义：' + it[2]];
+        if (it[3]) L.push('　出处：' + it[3]);
+        if (it[4]) L.push('　例句：' + it[4]);
+        return L;
+      },
+      todayLabel: function (d) { return '今日成语 · ' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; },
+      todayPick: function (seed) { return seed % IDIOMS.length; }
+    },
+
+    eng: {
+      key: 'eng', book: '🔤', label: '单词', favFile: '单词收藏本',
+      items: ENG, favKey: 'eng_favs', en: true,
+      placeholder: '查英文单词、中文释义，或拼写开头（如 eph）',
+      hint: '试试：<code>ephemeral</code>（单词）· <code>苹果</code>（中文反查）· <code>take</code>（前缀联想）· 点 <code>☆</code> 收进收藏本',
+      emptyMsg: '没找到相关单词（收录约 5.9 万常用词），换个拼写试试？',
+      countText: function () { return ENG.length.toLocaleString() + ' 个英文词'; },
+      extra: function () {
+        var T = [['', '全部'], ['word', '单词'], ['phrase', '词组']];
+        return '<div class="pbar"><span class="plab">类 型</span>' +
+          T.map(function (x) {
+            return '<button class="gchip tchip" data-t="' + x[0] + '"' + (ENG_F === x[0] ? ' active' : '') + '>' + x[1] + '</button>';
+          }).join('') +
+          '<span class="pnote">词组 ' + ENG_PH.toLocaleString() + ' 个 · 单词 ' + (ENG.length - ENG_PH).toLocaleString() + ' 个，按常用度排序</span></div>' +
+          '<div class="pbar"><span class="plab">外刊 · 阅读</span>' +
+          [['FT中文网 · 双语阅读', 'https://www.ftchinese.com/channel/english.html'],
+           ['中国日报 · 双语新闻', 'https://news.chinadaily.com.cn/language_news'],
+           ['VOA 慢速英语', 'https://learningenglish.voanews.com/'],
+           ['BBC Learning English', 'https://www.bbc.co.uk/learningenglish'],
+           ['经济学人', 'https://www.economist.com/'],
+           ['卫报', 'https://www.theguardian.com/'],
+           ['大西洋月刊', 'https://www.theatlantic.com/'],
+           ['科学美国人', 'https://www.scientificamerican.com/']
+          ].map(function (x) {
+            return '<a class="lchip" href="' + x[1] + '" target="_blank" rel="noopener">' + esc(x[0]) + '</a>';
+          }).join('') + '</div>';
+      },
+      score: function (it, i, q, nq, isAscii) {
+        if (ENG_F === 'word' && isPhrase(it)) return -1;
+        if (ENG_F === 'phrase' && !isPhrase(it)) return -1;
+        var low = ENG_LOW[i], s = -1;
+        if (low === q) s = 100;
+        else if (q.length >= 1 && low.indexOf(q) === 0) s = 80;
+        else if (q.length >= 2 && low.indexOf(q) > 0) s = 55;
+        else if (q.length >= (isAscii ? 3 : 1) && it[2].indexOf(q) >= 0) s = 30;
+        return s;
+      },
+      head: function (it, raw) {
+        return '<span class="w en">' + hl(it[0], raw) + '</span>' +
+          '<button class="spk" data-w="' + esc(it[0]) + '" title="朗读发音">🔊</button>' +
+          (it[1] ? '<span class="p">/' + esc(it[1]) + '/</span>' : '') +
+          chips(it[4], 3) +
+          '<span class="brief">' + esc(firstLine(it[2], 30)) + '</span>';
+      },
+      body: function (it) {
+        var h = '<div class="sec"><span class="lab l-exp">释 义</span><span class="txt">' + toBr(it[2]) + '</span></div>' +
+          engExtraHTML(it[0]);
+        if (it[3]) h += '<div class="sec"><span class="lab l-exc">词 形</span><span class="txt">' + esc(it[3].split('|').join(' · ')) + '</span></div>';
+        if (it[4]) h += '<div class="sec"><span class="lab l-der">词 表</span>' + chips(it[4], 0) + '</div>';
+        return h;
+      },
+      front: function (it) {
+        return '<div class="word en">' + esc(it[0]) + '</div>' +
+          '<div style="text-align:center;margin-top:6px"><button class="spk" data-w="' + esc(it[0]) + '" title="朗读发音">🔊 朗读</button></div>' +
+          '<div class="flip-hint">先回想它的中文意思，再点击卡片翻面</div>';
+      },
+      back: function (it) {
+        var h = '';
+        if (it[1]) h += '<div class="sec" style="margin-top:2px"><span class="py" style="color:var(--gold)">/' + esc(it[1]) + '/</span> ' + chips(it[4], 0) + '</div>';
+        h += '<div class="sec"><span class="lab l-exp">释 义</span><span class="txt">' + toBr(it[2]) + '</span></div>';
+        if (it[3]) h += '<div class="sec"><span class="lab l-exc">词 形</span><span class="txt">' + esc(it[3].split('|').join(' · ')) + '</span></div>';
+        return h;
+      },
+      detail: function (it) {
+        return '<div class="word en">' + esc(it[0]) + '<button class="spk" data-w="' + esc(it[0]) + '" title="朗读发音">🔊</button></div>' +
+          (it[1] ? '<div class="py">/' + esc(it[1]) + '/</div>' : '<div class="py"></div>') +
+          '<div class="sec"><span class="lab">释 义</span><span class="txt">' + toBr(it[2]) + '</span></div>' +
+          engExtraHTML(it[0]) +
+          (it[3] ? '<div class="sec exc"><span class="lab">词 形</span><span class="txt">' + esc(it[3].split('|').join(' · ')) + '</span></div>' : '') +
+          (it[4] ? '<div class="sec"><span class="lab" style="background:#8a7a55">词 表</span>' + chips(it[4], 0) + '</div>' : '');
+      },
+      exportOne: function (it) {
+        var L = ['【' + it[0] + '】' + (it[1] ? ' /' + it[1] + '/' : '') + (it[4] ? '  [' + it[4].split(' ').map(function (t) { return EX_CN[t] || t; }).join(',') + ']' : ''),
+                 '　释义：' + it[2].replace(/\n/g, '；')];
+        if (it[3]) L.push('　词形：' + it[3].split('|').join('，'));
+        return L;
+      },
+      todayLabel: function (d) { return '今日一词 · ' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; },
+      todayPick: function (seed) { return 2000 + seed % 20000; }  // 避开 the/of 这类超高频词
+    },
+
+    flower: {
+      key: 'flower', book: '🌸', label: '花卉', favFile: '花卉收藏本',
+      items: FLOWERS, favKey: 'flower_favs',
+      placeholder: '查花名、别名，或按花语反查（如 母爱）',
+      hint: '试试：<code>玫瑰</code>（花名）· <code>母爱</code>（花语反查）· <code>忘忧</code>（花语反查）· 点 <code>☆</code> 收进收藏本',
+      emptyMsg: '没找到相关花卉，换个花名或花语关键词试试？',
+      countText: function () { return FLOWERS.length.toLocaleString() + ' 种花卉'; },
+      score: function (it, i, q, nq, isAscii) {
+        var s = -1;
+        if (it[0] === q) s = 100;
+        else if (it[0].indexOf(q) === 0) s = 80;
+        else if (it[0].indexOf(q) > 0) s = 60;
+        else if (it[1].indexOf(q) >= 0) s = 55;
+        else if (it[2].indexOf(q) >= 0) s = 40;
+        else if (it[3].indexOf(q) >= 0) s = 30;
+        else if (it[5].indexOf(q) >= 0) s = 20;
+        return s;
+      },
+      head: function (it, raw) {
+        return thumbImg('flower', it[0], 'rthumb') +
+          '<span class="w">' + hl(it[0], raw) + '</span>' +
+          (it[1] ? '<span class="p">' + esc(it[1]) + '</span>' : '') +
+          '<span class="brief">花语：' + esc(firstLine(it[2], 24)) + '</span>';
+      },
+      body: function (it) {
+        return thumbImg('flower', it[0], 'dthumb') +
+          '<div class="sec"><span class="lab l-exp">花 语</span><span class="txt">' + esc(it[2]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exc">科 属</span><span class="txt">' + esc(it[3]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-der">花 期</span><span class="txt">' + esc(it[4]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exa">寓 意</span><span class="txt">' + esc(it[5]) + '</span></div>';
+      },
+      front: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="flip-hint">先回想它的花语，再点击卡片翻面</div>';
+      },
+      back: function (it) {
+        return '<div class="sec" style="margin-top:2px"><span class="lab l-exp">花 语</span><span class="txt">' + esc(it[2]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exc">科 属</span><span class="txt">' + esc(it[3]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-der">花 期</span><span class="txt">' + esc(it[4]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exa">寓 意</span><span class="txt">' + esc(it[5]) + '</span></div>';
+      },
+      detail: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="py">' + esc((it[1] ? '别名 ' + it[1] + ' · ' : '') + it[3] + ' · 花期 ' + it[4]) + '</div>' +
+          thumbImg('flower', it[0], 'dthumb') +
+          '<div class="sec"><span class="lab">花 语</span><span class="txt">' + esc(it[2]) + '</span></div>' +
+          '<div class="sec exa"><span class="lab">寓 意</span><span class="txt">' + esc(it[5]) + '</span></div>';
+      },
+      exportOne: function (it) {
+        return ['【' + it[0] + '】' + (it[1] ? '（别名：' + it[1] + '）' : ''),
+                '　花语：' + it[2],
+                '　' + it[3] + ' · 花期 ' + it[4],
+                '　寓意：' + it[5]];
+      },
+      todayLabel: function (d) { return '今日之花 · ' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; },
+      todayPick: function (seed) { return seed % FLOWERS.length; }
+    },
+
+    recipe: {
+      key: 'recipe', book: '🍳', label: '菜谱', favFile: '菜谱收藏本',
+      items: RECIPES, favKey: 'recipe_favs',
+      placeholder: '查菜名、食材，或按分类找（如 汤羹、简单）',
+      hint: '试试：<code>宫保鸡丁</code>（菜名）· <code>土豆</code>（食材反查）· <code>汤羹</code>（分类）· 上方选份量、点菜系筛选 · 「🍬 今日控糖」记录三餐',
+      emptyMsg: '没找到相关菜谱，换个菜名或食材试试？',
+      countText: function () { return RECIPES.length.toLocaleString() + ' 道菜谱'; },
+      score: function (it, i, q, nq, isAscii) {
+        var s = -1;
+        if (it[0] === q) s = 100;
+        else if (it[0].indexOf(q) === 0) s = 80;
+        else if (it[0].indexOf(q) > 0) s = 60;
+        else if (it[1].indexOf(q) >= 0) s = 55;
+        else if (it[2].indexOf(q) >= 0) s = 45;
+        else if (it[4].indexOf(q) >= 0) s = 40;
+        else if (it[3].indexOf(q) >= 0) s = 35;
+        else if (it[5].indexOf(q) >= 0) s = 10;
+        return s;
+      },
+      head: function (it, raw) {
+        return thumbImg('recipe', it[0], 'rthumb') +
+          '<span class="w">' + hl(it[0], raw) + '</span>' +
+          '<span class="chip">' + esc(it[2]) + '</span><span class="chip">' + esc(it[3]) + '</span>' +
+          '<span class="chip kcal">' + portionCalc(it).kcal + ' 千卡/' + P_LABEL[PORTION] + '</span>' +
+          '<span class="brief">' + esc(firstLine(it[4], 22)) + '</span>';
+      },
+      body: function (it, idx) {
+        return thumbImg('recipe', it[0], 'dthumb') +
+          '<div class="sec"><span class="lab l-exp">食 材</span><span class="txt">' + esc(it[4]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-der">做 法</span><span class="txt">' + toBr(it[5]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exa">小贴士</span><span class="txt">' + esc(it[6]) + '</span></div>' +
+          portionLine(it);
+      },
+      front: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="flip-hint">先想想需要哪些食材、怎么做，再点击卡片翻面</div>';
+      },
+      back: function (it) {
+        return '<div class="sec" style="margin-top:2px"><span class="lab l-exp">食 材</span><span class="txt">' + esc(it[4]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-der">做 法</span><span class="txt">' + toBr(it[5]) + '</span></div>';
+      },
+      detail: function (it, idx) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="py">' + esc((it[1] ? '别名 ' + it[1] + ' · ' : '') + it[2] + ' · 难度' + it[3]) + '</div>' +
+          thumbImg('recipe', it[0], 'dthumb') +
+          '<div class="sec"><span class="lab">食 材</span><span class="txt">' + esc(it[4]) + '</span></div>' +
+          '<div class="sec der"><span class="lab">做 法</span><span class="txt">' + toBr(it[5]) + '</span></div>' +
+          '<div class="sec exa"><span class="lab">小贴士</span><span class="txt">' + esc(it[6]) + '</span></div>' +
+          portionLine(it);
+      },
+      exportOne: function (it) {
+        return ['【' + it[0] + '】' + (it[1] ? '（别名：' + it[1] + '）' : '') + it[2] + ' · 难度' + it[3],
+                '　食材：' + it[4],
+                '　做法：' + it[5].split('\n').join('；'),
+                '　份量（' + P_LABEL[PORTION] + '）：' + portionEstimate(it, PORTION),
+                '　小贴士：' + it[6]];
+      },
+      filters: function () {
+        var seen = {};
+        RECIPES.forEach(function (it) { seen[it[2]] = 1; });
+        return Object.keys(seen);
+      },
+      extra: function () {
+        return '<div class="pbar"><span class="plab">份 量</span>' +
+          ['plate', 'bowl', 'small'].map(function (u) {
+            return '<button class="pbtn" data-u="' + u + '">' + P_LABEL[u] + '</button>';
+          }).join('') +
+          '<span class="pnote">选一次，所有菜谱都按这个份量显示估算重量和热量</span>' +
+          '<button class="fbtn" id="fridgeBtn" title="点选有的食材，看能做什么菜">🥕 冰箱模式</button>' +
+          '<button class="dbtn" id="diaBtn" title="记录今天的餐点和剩余热量">🍬 今日控糖</button></div>';
+      },
+      afterExtra: function () {
+        $extra.querySelectorAll('.pbtn').forEach(function (x) {
+          x.classList.toggle('on', x.dataset.u === PORTION);
+        });
+      },
+      todayLabel: function (d) { return '今日一菜 · ' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; },
+      todayPick: function (seed) { return seed % RECIPES.length; }
+    },
+
+    sugar: {
+      key: 'sugar', book: '🍬', label: '控糖', favFile: '控糖收藏本',
+      items: FOODS, favKey: 'sugar_favs',
+      placeholder: '查食物名、分类，或按风险等级找（高/中/低）',
+      hint: '试试：<code>西瓜</code>（食物）· <code>高</code>（高风险食物）· <code>水果</code>（分类）· 上方可估算每日糖上限',
+      emptyMsg: '没找到相关食物，换个名称或分类试试？',
+      countText: function () { return FOODS.length.toLocaleString() + ' 种食物'; },
+      riskClass: function (r) { return r === '高' ? 'r-high' : (r === '中' ? 'r-mid' : 'r-low'); },
+      score: function (it, i, q, nq, isAscii) {
+        var s = -1;
+        if (it[0] === q) s = 100;
+        else if (it[0].indexOf(q) === 0) s = 80;
+        else if (it[0].indexOf(q) > 0) s = 60;
+        else if (it[1].indexOf(q) >= 0) s = 55;
+        else if (it[2].indexOf(q) >= 0) s = 45;
+        else if ((q === '高' || q === '中' || q === '低') && it[6] === q) s = 40;
+        else if (it[7].indexOf(q) >= 0) s = 20;
+        else if (it[3].indexOf(q) >= 0) s = 15;
+        return s;
+      },
+      head: function (it, raw) {
+        return thumbImg('food', it[0], 'rthumb') +
+          '<span class="w">' + hl(it[0], raw) + '</span>' +
+          '<span class="chip ' + this.riskClass(it[6]) + '">' + esc(it[6]) + '风险</span>' +
+          '<span class="chip">' + esc(it[2]) + '</span>' +
+          '<span class="brief">含糖 ' + esc(it[3]) + 'g/100g · GI ' + esc(it[5]) + '</span>';
+      },
+      body: function (it) {
+        return thumbImg('food', it[0], 'dthumb') +
+          '<div class="sec"><span class="lab l-exp">含糖量</span><span class="txt">每100克约 ' + esc(it[3]) + ' 克' +
+            (it[2] === '主食' ? '（按碳水化合物计）' : '') + '</span></div>' +
+          '<div class="sec"><span class="lab l-exc">热 量</span><span class="txt">每100克约 ' + esc(it[4]) + ' 千卡</span></div>' +
+          '<div class="sec"><span class="lab l-der">升糖指数</span><span class="txt">GI ' + esc(it[5]) + '（低&lt;55，中55–69，高≥70）</span></div>' +
+          '<div class="sec"><span class="lab l-exa">食用建议</span><span class="txt">' + esc(it[7]) + '</span></div>';
+      },
+      front: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="flip-hint">先猜猜它的风险等级和含糖量，再点击卡片翻面</div>';
+      },
+      back: function (it) {
+        return '<div class="sec" style="margin-top:2px"><span class="lab l-exp">含糖量</span><span class="txt">每100克约 ' + esc(it[3]) + ' 克</span></div>' +
+          '<div class="sec"><span class="lab l-exc">热 量</span><span class="txt">每100克约 ' + esc(it[4]) + ' 千卡</span></div>' +
+          '<div class="sec"><span class="lab l-der">升糖指数</span><span class="txt">GI ' + esc(it[5]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exa">食用建议</span><span class="txt">' + esc(it[7]) + '</span></div>';
+      },
+      detail: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="py">' + esc((it[1] ? '别名 ' + it[1] + ' · ' : '') + it[2] + ' · ' + it[6] + '风险') + '</div>' +
+          this.body(it);
+      },
+      exportOne: function (it) {
+        return ['【' + it[0] + '】' + it[2] + ' · ' + it[6] + '风险',
+                '　含糖量：' + it[3] + '克/100克 · 热量：' + it[4] + '千卡/100克 · GI：' + it[5],
+                '　建议：' + it[7]];
+      },
+      todayLabel: function (d) { return '今日一食 · ' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; },
+      todayPick: function (seed) { return seed % FOODS.length; },
+      extra: function () {
+        return '<div class="pbar"><button class="fbtn" id="calcToggle">🧮 控糖计算器</button>' +
+          '<span class="pnote">输入血糖值和年龄，估算每日添加糖参考上限</span></div>' +
+          '<div id="calcWrap" style="display:none">' +
+          '<div class="feature-card calc-card"><div class="tag">控糖计算器 · 参考估算</div>' +
+          '<div class="calc-row">' +
+            '<label>血糖值 <input id="calcGl" type="number" step="0.1" min="1" max="40" placeholder="如 6.5"></label>' +
+            '<label>类型 <select id="calcType"><option value="fast">空腹血糖</option><option value="pp2">餐后2小时</option></select></label>' +
+            '<label>年龄 <input id="calcAge" type="number" step="1" min="1" max="120" placeholder="如 55"></label>' +
+            '<button id="calcBtn">估 算</button>' +
+          '</div>' +
+          '<div id="calcResult" class="calc-result">输入血糖值和年龄，估算每日添加糖参考上限。上限指白糖、饮料、甜点等添加糖，主食碳水另计。</div>' +
+          '</div></div>';
+      },
+      afterExtra: function () {
+        var tg = document.getElementById('calcToggle');
+        if (tg) tg.addEventListener('click', function () {
+          var wrap = document.getElementById('calcWrap');
+          var open = wrap.style.display !== 'none';
+          wrap.style.display = open ? 'none' : '';
+          tg.classList.toggle('on', !open);
+        });
+        var btn = document.getElementById('calcBtn');
+        if (!btn) return;
+        function run() {
+          var gl = parseFloat(document.getElementById('calcGl').value);
+          var age = parseInt(document.getElementById('calcAge').value, 10);
+          var type = document.getElementById('calcType').value;
+          var out = document.getElementById('calcResult');
+          if (!(gl > 0) || !(age > 0)) { out.innerHTML = '请输入有效的血糖值和年龄。'; return; }
+          var status, base, advice;
+          if (type === 'fast') {
+            if (gl < 5.6) { status = '空腹血糖正常'; base = 50; advice = '按均衡饮食即可，含糖饮料和甜点尽量少碰。'; }
+            else if (gl < 6.1) { status = '空腹血糖临界偏高'; base = 25; advice = '现在调整还来得及：少喝甜饮、主食粗细搭配、先菜后饭。'; }
+            else if (gl < 7.0) { status = '空腹血糖受损（糖尿病前期）'; base = 18; advice = '前期通过饮食和运动大多可以逆转，建议规律监测血糖。'; }
+            else { status = '空腹血糖达到糖尿病诊断切点'; base = 10; advice = '请尽快到内分泌科就诊确诊；上限仅指添加糖，主食等碳水请遵医嘱安排。'; }
+          } else {
+            if (gl < 7.8) { status = '餐后血糖正常'; base = 50; advice = '按均衡饮食即可，含糖饮料和甜点尽量少碰。'; }
+            else if (gl < 11.1) { status = '糖耐量受损（糖尿病前期）'; base = 20; advice = '前期通过饮食和运动大多可以逆转，建议规律监测血糖。'; }
+            else { status = '餐后血糖达到糖尿病诊断切点'; base = 10; advice = '请尽快到内分泌科就诊确诊；上限仅指添加糖，主食等碳水请遵医嘱安排。'; }
+          }
+          var factor = age < 40 ? 1.1 : (age <= 60 ? 1.0 : (age <= 70 ? 0.9 : 0.8));
+          var max = Math.min(50, Math.round(base * factor));
+          out.innerHTML =
+            '<b>血糖状态：</b><span class="st">' + status + '</span><br>' +
+            '每日添加糖参考上限：约 <span class="num">' + max + '</span> 克/天（按年龄 ' + age + ' 岁，系数 ×' + factor + '）' +
+            '<span class="advice">' + advice + '</span>' +
+            '<span class="warn">估算仅供健康参考，不构成医疗建议；主食等碳水化合物另计，具体请遵医嘱或咨询营养师。</span>';
+        }
+        btn.addEventListener('click', run);
+        ['calcGl', 'calcAge'].forEach(function (id) {
+          document.getElementById(id).addEventListener('keydown', function (e) { if (e.key === 'Enter') run(); });
+        });
+        document.getElementById('calcType').addEventListener('change', run);
+      }
+    },
+
+    rare: {
+      key: 'rare', book: '📜', label: '生僻字', favFile: '生僻字收藏本',
+      items: RARE, favKey: 'rare_favs',
+      placeholder: '查生僻字：拼音（cuàn）、部首（火）、笔画数（30）',
+      hint: '打不出来的字：<code>部首</code> + <code>笔画数</code> 在上方组合筛选 · 会读就输拼音 <code>cuàn</code> · 也可在别处复制粘贴过来',
+      emptyMsg: '没找到，试试放宽条件：部首和笔画数二选一，或笔画数±1',
+      countText: function () { return RARE.length.toLocaleString() + ' 个生僻字'; },
+      score: function (it, i, q, nq, isAscii) {
+        if (rareScore(it) <= 0) return -1;
+        if (!q) return 1000 - it[3];
+        if (it[0] === q) return 100;
+        var np = normPy(it[1]);
+        if (nq && np.indexOf(nq) === 0) return 80;
+        if (nq && np.indexOf(nq) > 0) return 60;
+        if (it[2] === q) return 55;
+        if (it[4].indexOf(q) >= 0) return 20;
+        return -1;
+      },
+      head: function (it, raw) {
+        return '<span class="w">' + hl(it[0], raw) + '</span>' +
+          '<span class="chip">' + esc(it[1]) + '</span>' +
+          '<span class="chip">' + esc(it[2]) + '部</span>' +
+          '<span class="chip">' + it[3] + '画</span>' +
+          '<span class="brief">' + esc(firstLine(it[4], 24)) + '</span>';
+      },
+      body: function (it) {
+        return '<div class="sec"><span class="lab l-exp">读 音</span><span class="txt">' + esc(it[1]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exc">部首笔画</span><span class="txt">' + esc(it[2]) + '部 · ' + it[3] + ' 画</span></div>' +
+          '<div class="sec"><span class="lab l-der">释 义</span><span class="txt">' + toBr(it[4]) + '</span></div>';
+      },
+      front: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="py">' + esc(it[2] + '部 · ' + it[3] + ' 画') + '</div>' +
+          '<div class="flip-hint">先想想它的读音和意思，再点击卡片翻面</div>';
+      },
+      back: function (it) { return this.body(it); },
+      detail: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="py">' + esc(it[1] + ' · ' + it[2] + '部 · ' + it[3] + '画') + '</div>' +
+          '<div class="sec"><span class="lab">释 义</span><span class="txt">' + toBr(it[4]) + '</span></div>';
+      },
+      exportOne: function (it) {
+        return ['【' + it[0] + '】 ' + it[1] + ' · ' + it[2] + '部 ' + it[3] + '画',
+                '　释义：' + it[4].replace(/\n/g, '；')];
+      },
+      todayLabel: function (d) { return '今日一字 · ' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; },
+      todayPick: function (seed) { return seed % RARE.length; },
+      extra: function () {
+        var stkOpts = '';
+        for (var s = 2; s <= 30; s++) stkOpts += '<option value="' + s + '"' + (RARE_F.s === s ? ' selected' : '') + '>' + s + ' 画</option>';
+        var strOpts = [['', '不限结构'], ['⿰', '⿰ 左右'], ['⿱', '⿱ 上下'], ['⿲', '⿲ 左中右'], ['⿳', '⿳ 上中下'],
+                       ['⿴', '⿴ 全包围'], ['⿸', '⿸ 半包围'], ['⿺', '⿺ 走之底']]
+          .map(function (x) {
+            return '<option value="' + x[0] + '"' + (RARE_F.str === x[0] ? ' selected' : '') + '>' + x[1] + '</option>';
+          }).join('');
+        return '<div class="pbar"><span class="plab">检 字</span>' +
+          '<select id="rareRad" class="rsel"><option value="">部首</option>' +
+            RARE_RAD.slice(0, 60).map(function (r) {
+              return '<option value="' + esc(r) + '"' + (RARE_F.r === r ? ' selected' : '') + '>' + esc(r) + '部</option>';
+            }).join('') + '</select>' +
+          '<select id="rareStk" class="rsel"><option value="">笔画数</option>' + stkOpts + '</select>' +
+          '<button class="fbtn" id="rareClear">清除筛选</button>' +
+          '<span class="pnote">会读就输拼音，打不出就往下用部件拆</span></div>' +
+          '<div class="pbar"><span class="plab">拆 字</span>' +
+          '<select id="rareStr" class="rsel">' + strOpts + '</select>' +
+          '<input id="rareP1" class="rsel" style="width:86px" placeholder="部件1 如 土">' +
+          '<input id="rareP2" class="rsel" style="width:86px" placeholder="部件2 如 川">' +
+          '<input id="rareP3" class="rsel" style="width:86px;display:none" placeholder="部件3">' +
+          '<span class="pnote">填认识的部件就行，如 土+川 → 圳</span></div>';
+      },
+      afterExtra: function () {
+        var rr = document.getElementById('rareRad'), rs = document.getElementById('rareStk');
+        function apply() {
+          RARE_F.r = rr.value;
+          RARE_F.s = rs.value ? parseInt(rs.value, 10) : 0;
+          runQuery();
+        }
+        if (rr) rr.addEventListener('change', apply);
+        if (rs) rs.addEventListener('change', apply);
+        var stl = document.getElementById('rareStr'),
+            p1 = document.getElementById('rareP1'),
+            p2 = document.getElementById('rareP2'),
+            p3 = document.getElementById('rareP3');
+        var HINTS = {
+          '': ['部件1 如 土', '部件2 如 川'],
+          '⿰': ['左 如 土', '右 如 川'],
+          '⿱': ['上 如 艹', '下 如 化'],
+          '⿲': ['左', '中', '右'],
+          '⿳': ['上', '中', '下'],
+          '⿴': ['外框 如 囗', '内部'],
+          '⿸': ['外框 如 广', '内部'],
+          '⿺': ['走之 如 辶', '内部']
+        };
+        function syncP3() {
+          var three = stl.value === '⿲' || stl.value === '⿳';
+          if (p3) p3.style.display = three ? '' : 'none';
+          var h = HINTS[stl.value] || HINTS[''];
+          if (p1) p1.placeholder = h[0];
+          if (p2) p2.placeholder = h[1];
+          if (p3) p3.placeholder = h[2] || '部件3';
+        }
+        function applyParts() {
+          RARE_F.str = stl.value;
+          RARE_F.p1 = p1.value.trim();
+          RARE_F.p2 = p2.value.trim();
+          RARE_F.p3 = p3 && p3.style.display !== 'none' ? p3.value.trim() : '';
+          runQuery();
+        }
+        if (stl) stl.addEventListener('change', function () { syncP3(); applyParts(); });
+        [p1, p2, p3].forEach(function (inp) {
+          if (inp) {
+            inp.addEventListener('change', applyParts);
+            inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') applyParts(); });
+          }
+        });
+        syncP3();
+        var clr = document.getElementById('rareClear');
+        if (clr) clr.addEventListener('click', function () {
+          RARE_F = { r: '', s: 0, str: '', p1: '', p2: '', p3: '' };
+          rr.value = ''; rs.value = '';
+          if (stl) stl.value = '';
+          if (p1) p1.value = '';
+          if (p2) p2.value = '';
+          rr.value = ''; rs.value = '';
+          if (stl) stl.value = '';
+          if (p1) p1.value = '';
+          if (p2) p2.value = '';
+          if (p3) p3.value = '';
+          syncP3();
+          runQuery();
+        });
+      }
+    },
+
+    term: {
+      key: 'term', book: '🎓', label: '术语', favFile: '术语收藏本',
+      items: TERMS, favKey: 'term_favs',
+      placeholder: '查专业术语：缩写（GUI）、中文（缓存）、英文（cache）',
+      hint: '试试：<code>GUI</code>（缩写查全称）· <code>缓存</code>（计算机）· <code>insulin</code>（胰岛素）· 上方按领域筛选',
+      emptyMsg: '没有找到相关术语，换个说法或切换领域试试',
+      countText: function () { return TERMS.length.toLocaleString() + ' 条专业术语'; },
+      score: function (it, i, q, nq, isAscii) {
+        if (TERM_F && it[2] !== TERM_F) return -1;
+        if (!q) return 50;
+        var en = it[1].toLowerCase();
+        var ab = it[4] ? it[4].toLowerCase() : '';
+        if (it[0] === q) return 100;
+        if (it[0].indexOf(q) === 0) return 90;
+        if (it[0].indexOf(q) > 0) return 80;
+        if (ab && ab === q) return 92;
+        if (ab && ab.indexOf(q) === 0) return 88;
+        if (en.indexOf(q) === 0) return 78;
+        if (en.indexOf(q) > 0) return 66;
+        if (ab && ab.indexOf(q) > 0) return 60;
+        if (it[2] === q) return 60;
+        if (it[3].indexOf(q) >= 0) return 30;
+        return -1;
+      },
+      head: function (it, raw) {
+        return '<span class="w">' + hl(it[0], raw) + '</span>' +
+          '<span class="p">' + esc(it[1]) + '</span>' +
+          '<span class="chip">' + esc(it[2]) + '</span>' +
+          (it[4] ? '<span class="chip kcal">缩写 ' + esc(it[4]) + '</span>' : '') +
+          '<span class="brief">' + esc(firstLine(it[3], 28)) + '</span>';
+      },
+      body: function (it) {
+        return '<div class="sec"><span class="lab l-exp">英 文</span><span class="txt">' + esc(it[1]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exc">领 域</span><span class="txt">' + esc(it[2]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-der">释 义</span><span class="txt">' + toBr(it[3]) + '</span></div>';
+      },
+      front: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="flip-hint">想想它的英文说法和含义，再点击卡片翻面</div>';
+      },
+      back: function (it) { return this.body(it); },
+      detail: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="py">' + esc(it[1] + ' · ' + it[2]) + (it[4] ? '<span class="chip kcal" style="margin-left:10px">缩写 ' + esc(it[4]) + '</span>' : '') + '</div>' +
+          '<div class="sec"><span class="lab">释 义</span><span class="txt">' + toBr(it[3]) + '</span></div>';
+      },
+      exportOne: function (it) {
+        return ['【' + it[0] + '】 ' + it[1] + ' · ' + it[2], '　释义：' + it[3]];
+      },
+      todayLabel: function (d) { return '今日术语 · ' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; },
+      todayPick: function (seed) { return seed % TERMS.length; },
+      extra: function () {
+        var doms = [];
+        TERMS.forEach(function (it) { if (doms.indexOf(it[2]) < 0) doms.push(it[2]); });
+        return '<div class="pbar"><span class="plab">领 域</span>' +
+          '<button class="gchip dchip" data-d=""' + (TERM_F === '' ? ' active' : '') + '>全部</button>' +
+          doms.map(function (dm) {
+            return '<button class="gchip dchip" data-d="' + esc(dm) + '"' + (TERM_F === dm ? ' active' : '') + '>' + esc(dm) + '</button>';
+          }).join('') +
+          '<span class="pnote">共 ' + TERMS.length.toLocaleString() + ' 条 · 人工整理 · 收藏可复习</span></div>';
+      }
+    },
+
+    psy: {
+      key: 'psy', book: '🧠', label: '心理学', favFile: '心理学收藏本',
+      items: PSY, favKey: 'psy_favs',
+      placeholder: '查心理学：中文（心流）、英文（flow）、效应（巴纳姆）',
+      hint: '试试：<code>心流</code> · <code>flow</code> · <code>达克效应</code> · <code>依恋</code> · 上方按分类筛选',
+      emptyMsg: '没有找到相关词条，换个说法或切换分类试试',
+      countText: function () { return PSY.length.toLocaleString() + ' 条心理学词条'; },
+      score: function (it, i, q, nq, isAscii) {
+        if (PSY_F && it[2] !== PSY_F) return -1;
+        if (!q) return 50;
+        var en = it[1].toLowerCase();
+        if (it[0] === q) return 100;
+        if (it[0].indexOf(q) === 0) return 90;
+        if (it[0].indexOf(q) > 0) return 80;
+        if (en.indexOf(q) === 0) return 78;
+        if (en.indexOf(q) > 0) return 66;
+        if (it[2] === q) return 60;
+        if (it[3].indexOf(q) >= 0) return 30;
+        if (it[4] && it[4].indexOf(q) >= 0) return 20;
+        return -1;
+      },
+      head: function (it, raw) {
+        return '<span class="w">' + hl(it[0], raw) + '</span>' +
+          '<span class="p">' + esc(it[1]) + '</span>' +
+          '<span class="chip">' + esc(it[2]) + '</span>' +
+          '<span class="brief">' + esc(firstLine(it[3], 28)) + '</span>';
+      },
+      body: function (it) {
+        return '<div class="sec"><span class="lab l-exp">英 文</span><span class="txt">' + esc(it[1]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exc">分 类</span><span class="txt">' + esc(it[2]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-der">释 义</span><span class="txt">' + toBr(it[3]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exa">案 例</span><span class="txt">' + toBr(it[4]) + '</span></div>';
+      },
+      front: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="flip-hint">想想它的英文说法和含义，再点击卡片翻面</div>';
+      },
+      back: function (it) { return this.body(it); },
+      detail: function (it) {
+        return '<div class="word">' + esc(it[0]) + '</div>' +
+          '<div class="py">' + esc(it[1] + ' · ' + it[2]) + '</div>' +
+          '<div class="sec"><span class="lab">释 义</span><span class="txt">' + toBr(it[3]) + '</span></div>' +
+          '<div class="sec"><span class="lab l-exa">案 例</span><span class="txt">' + toBr(it[4]) + '</span></div>';
+      },
+      exportOne: function (it) {
+        return ['【' + it[0] + '】 ' + it[1] + ' · ' + it[2], '　释义：' + it[3], '　案例：' + it[4]];
+      },
+      todayLabel: function (d) { return '今日心理词 · ' + (d.getMonth() + 1) + '月' + d.getDate() + '日'; },
+      todayPick: function (seed) { return seed % PSY.length; },
+      extra: function () {
+        var cats = [];
+        PSY.forEach(function (it) { if (cats.indexOf(it[2]) < 0) cats.push(it[2]); });
+        return '<div class="pbar"><span class="plab">分 类</span>' +
+          '<button class="gchip ychip" data-d=""' + (PSY_F === '' ? ' active' : '') + '>全部</button>' +
+          cats.map(function (c) {
+            return '<button class="gchip ychip" data-d="' + esc(c) + '"' + (PSY_F === c ? ' active' : '') + '>' + esc(c) + '</button>';
+          }).join('') +
+          '<span class="pnote">共 ' + PSY.length.toLocaleString() + ' 条 · 人工整理 · 收藏可复习</span></div>';
+      }
+    }
+  };
+  var KEYS = ['idiom'];
+  if (ENG.length) KEYS.push('eng');
+  if (FLOWERS.length) KEYS.push('flower');
+  if (RECIPES.length) KEYS.push('recipe');
+  if (FOODS.length) KEYS.push('sugar');
+  if (RARE.length) KEYS.push('rare');
+  if (TERMS.length) KEYS.push('term');
+  if (PSY.length) KEYS.push('psy');
+
+  /* ================= 收藏（分两本） ================= */
+  var wordIdx = {};
+  KEYS.forEach(function (k) {
+    wordIdx[k] = {};
+    DICTS[k].items.forEach(function (it, i) { wordIdx[k][it[0]] = i; });
+  });
+
+  var FAVS = {};
+  KEYS.forEach(function (k) {
+    var f = [];
+    try { f = JSON.parse(localStorage.getItem(DICTS[k].favKey) || '[]'); } catch (e) { f = []; }
+    if (!Array.isArray(f)) f = [];
+    FAVS[k] = Array.from(new Set(f)).filter(function (w) { return wordIdx[k].hasOwnProperty(w); });
+  });
+
+  function saveFavs(k) {
+    try { localStorage.setItem(DICTS[k].favKey, JSON.stringify(FAVS[k])); } catch (e) {}
+    updateFavBadge();
+  }
+  function isFav(k, w) { return FAVS[k].indexOf(w) >= 0; }
+  function toggleFav(k, w) {
+    var arr = FAVS[k], i = arr.indexOf(w);
+    if (i >= 0) arr.splice(i, 1); else arr.unshift(w);
+    saveFavs(k);
+    refreshStars();
+    if (favView === 'list' && favBook === k) renderFavList();
+  }
+  function updateFavBadge() {
+    var n = 0;
+    KEYS.forEach(function (k) { n += FAVS[k].length; });
+    document.getElementById('favCount').textContent = n;
+  }
+  function starHTML(k, w) {
+    var on = isFav(k, w);
+    return '<button class="star' + (on ? ' on' : '') + '" data-book="' + k + '" data-w="' + esc(w) +
+      '" title="' + (on ? '取消收藏' : '收藏到收藏本') + '">' + (on ? '★' : '☆') + '</button>';
+  }
+  document.addEventListener('click', function (e) {
+    var s = e.target.closest ? e.target.closest('.star') : null;
+    if (s && s.dataset.book && s.dataset.w) { e.stopPropagation(); e.preventDefault(); toggleFav(s.dataset.book, s.dataset.w); }
+  }, true);
+  function refreshStars() {
+    document.querySelectorAll('.star').forEach(function (s) {
+      var on = isFav(s.dataset.book, s.dataset.w);
+      s.classList.toggle('on', on);
+      s.textContent = on ? '★' : '☆';
+      s.title = on ? '取消收藏' : '收藏到收藏本';
+    });
+  }
+
+  /* ================= 收藏本弹层 ================= */
+  var favBook = 'idiom', favView = null, review = null;
+
+  function openFav() { $favOverlay.classList.add('show'); favBook = cur; renderFavList(); }
+  function closeFav() { $favOverlay.classList.remove('show'); favView = null; review = null; }
+  function renderFavList() {
+    favView = 'list';
+    var d = DICTS[favBook];
+    var favs = FAVS[favBook], has = favs.length > 0;
+    var bookTabs = KEYS.map(function (k) {
+      return '<button class="btab' + (k === favBook ? ' active' : '') + '" data-b="' + k + '">' +
+        DICTS[k].book + ' ' + DICTS[k].label + ' <b>' + FAVS[k].length + '</b></button>';
+    }).join('');
+    $favPanel.innerHTML =
+      '<div class="fav-top"><h2>📖 收藏本</h2>' + bookTabs +
+        '<button class="xbtn" id="favClose" title="关闭">✕</button></div>' +
+      '<div class="fav-head"><span class="cnt">' + (has ? '共 ' + favs.length + ' 条，点击可展开详情' : '') + '</span>' +
+        '<button class="primary" id="favStudy" ' + (has ? '' : 'disabled') + '>▶ 开始复习</button>' +
+        '<button id="favShuffle" ' + (has ? '' : 'disabled') + '>🔀 打乱复习</button>' +
+        '<button id="favExport" ' + (has ? '' : 'disabled') + '>⬇ 导出文本</button>' +
+        '<button id="favClear" ' + (has ? '' : 'disabled') + '>清空</button>' +
+      '</div><div id="favList"></div>';
+    var list = $favPanel.querySelector('#favList');
+    if (!has) {
+      list.innerHTML = '<div class="none">「' + d.label + '」还没有收藏。<br>在搜索结果或卡片上点 ☆ 收进来复习吧。</div>';
+    } else {
+      favs.forEach(function (w) { list.appendChild(rowEl(d, wordIdx[favBook][w], false)); });
+    }
+    $favPanel.querySelectorAll('.btab').forEach(function (b) {
+      b.addEventListener('click', function () { favBook = b.dataset.b; renderFavList(); });
+    });
+    $favPanel.querySelector('#favStudy').addEventListener('click', function () { startReview(false); });
+    $favPanel.querySelector('#favShuffle').addEventListener('click', function () { startReview(true); });
+    $favPanel.querySelector('#favExport').addEventListener('click', exportFavs);
+    $favPanel.querySelector('#favClear').addEventListener('click', function () {
+      if (confirm('确定清空「' + d.label + '」的全部 ' + favs.length + ' 条收藏吗？此操作不可恢复。')) {
+        FAVS[favBook] = []; saveFavs(favBook); renderFavList();
+      }
+    });
+    $favPanel.querySelector('#favClose').addEventListener('click', closeFav);
+  }
+
+  function exportFavs() {
+    var d = DICTS[favBook];
+    var lines = [d.favFile + ' · 导出于 ' + new Date().toLocaleString(), ''];
+    FAVS[favBook].forEach(function (w) {
+      lines = lines.concat(d.exportOne(d.items[wordIdx[favBook][w]]));
+      lines.push('');
+    });
+    var blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = d.favFile + '.txt';
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+  }
+
+  function startReview(shuffle) {
+    var order = FAVS[favBook].map(function (w) { return wordIdx[favBook][w]; });
+    if (shuffle) {
+      for (var i = order.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = order[i]; order[i] = order[j]; order[j] = t;
+      }
+    }
+    review = { order: order, pos: 0, flipped: false };
+    renderReview();
+  }
+
+  function renderReview() {
+    favView = 'review';
+    var d = DICTS[favBook];
+    var it = d.items[review.order[review.pos]];
+    var n = review.order.length;
+    $favPanel.innerHTML =
+      '<div class="fav-top"><h2>🖊 复习 · ' + d.label + '</h2>' +
+        '<button id="rvShuffle">🔀 换个顺序</button>' +
+        '<button id="rvBack" style="margin-left:8px">← 返回列表</button>' +
+        '<button class="xbtn" id="favClose2" title="关闭">✕</button></div>' +
+      '<div class="review-info">第 <b>' + (review.pos + 1) + '</b> / ' + n + ' 条 · 空格翻面 · ← → 切换</div>' +
+      '<div class="fc' + (review.flipped ? ' flipped' : '') + '" id="fc"><div class="fc-inner">' +
+        '<div class="fc-face fc-front">' + starHTML(favBook, it[0]) + d.front(it) + '</div>' +
+        '<div class="fc-face fc-back">' + starHTML(favBook, it[0]) + d.back(it) + '</div>' +
+      '</div></div>' +
+      '<div class="fc-nav">' +
+        '<button id="rvPrev">← 上一条</button>' +
+        '<button id="rvFlip">翻 面</button>' +
+        '<button id="rvNext">下一条 →</button>' +
+      '</div>';
+    $favPanel.querySelector('#fc').addEventListener('click', flipCard);
+    $favPanel.querySelector('#rvFlip').addEventListener('click', flipCard);
+    $favPanel.querySelector('#rvPrev').addEventListener('click', function () { rvGo(-1); });
+    $favPanel.querySelector('#rvNext').addEventListener('click', function () { rvGo(1); });
+    $favPanel.querySelector('#rvShuffle').addEventListener('click', function () { startReview(true); });
+    $favPanel.querySelector('#rvBack').addEventListener('click', renderFavList);
+    $favPanel.querySelector('#favClose2').addEventListener('click', closeFav);
+  }
+  function flipCard() {
+    review.flipped = !review.flipped;
+    $favPanel.querySelector('#fc').classList.toggle('flipped', review.flipped);
+  }
+  function rvGo(dir) {
+    var n = review.order.length;
+    review.pos = (review.pos + dir + n) % n;
+    review.flipped = false;
+    renderReview();
+  }
+
+  /* ================= 页面主体 ================= */
+  var $q = document.getElementById('q');
+  var $results = document.getElementById('results');
+  var $meta = document.getElementById('meta');
+  var $card = document.getElementById('card');
+  var $more = document.getElementById('more');
+  var $favOverlay = document.getElementById('favOverlay');
+  var $favPanel = document.getElementById('favPanel');
+  var $hint = document.getElementById('hint');
+  var $tabs = document.getElementById('tabs');
+  var $extra = document.getElementById('extra');
+
+  var cur = 'idiom';
+  var TABST = {};
+  KEYS.forEach(function (k) { TABST[k] = { q: '', shown: [], rendered: 0 }; });
+
+  // 顶部统计
+  document.getElementById('stats').innerHTML =
+    '收录 <b>' + IDIOMS.length.toLocaleString() + '</b> 条成语' +
+    (ENG.length ? ' · <b>' + ENG.length.toLocaleString() + '</b> 个英文词' : '') +
+    (FLOWERS.length ? ' · <b>' + FLOWERS.length.toLocaleString() + '</b> 种花卉' : '') +
+    (RECIPES.length ? ' · <b>' + RECIPES.length.toLocaleString() + '</b> 道菜谱' : '') +
+    (FOODS.length ? ' · <b>' + FOODS.length.toLocaleString() + '</b> 种食物含糖数据' : '') +
+    (RARE.length ? ' · <b>' + RARE.length.toLocaleString() + '</b> 个生僻字' : '') +
+    (TERMS.length ? ' · <b>' + TERMS.length.toLocaleString() + '</b> 条专业术语' : '') +
+    (PSY.length ? ' · <b>' + PSY.length.toLocaleString() + '</b> 条心理学词条' : '') +
+    ' · BaikeBox v1.0.0 · 纯离线 · 双击即用';
+
+  // 标签
+  KEYS.forEach(function (k) {
+    var b = document.createElement('button');
+    b.className = 'tab' + (k === cur ? ' active' : '');
+    b.dataset.t = k;
+    b.textContent = k === 'idiom' ? '成语' : (k === 'eng' ? '英汉词典' : (k === 'flower' ? '花语' : (k === 'recipe' ? '菜谱' : (k === 'sugar' ? '控糖' : (k === 'rare' ? '生僻字' : (k === 'term' ? '术语' : '心理学'))))));
+    b.addEventListener('click', function () { switchTab(k); });
+    $tabs.appendChild(b);
+  });
+
+  function updateExtra() {
+    var d = DICTS[cur];
+    var html = '';
+    if (d.extra) html += d.extra();
+    if (FRIDGE_MODE && cur === 'recipe') {
+      html += ingBarHTML();
+    } else if (d.filters) {
+      html += '<div class="fbar"><span class="plab">菜 系</span>' +
+        '<button class="chip fchip" data-f="">全部</button>' +
+        d.filters().map(function (f) {
+          return '<button class="chip fchip" data-f="' + esc(f) + '">' + esc(f) + '</button>';
+        }).join('') + '</div>';
+    }
+    $extra.innerHTML = html;
+    $extra.querySelectorAll('.fchip').forEach(function (c) {
+      c.addEventListener('click', function () { $q.value = c.dataset.f; runQuery(); });
+    });
+    var ingI = document.getElementById('ingFilter');
+    if (ingI) {
+      renderIngChips('');
+      ingI.addEventListener('input', function () { renderIngChips(ingI.value); });
+    }
+    if (d.afterExtra) d.afterExtra();
+    refreshFilters();
+  }
+  function refreshFilters() {
+    if (!DICTS[cur].filters) return;
+    var q = $q.value.trim();
+    $extra.querySelectorAll('.fchip').forEach(function (c) {
+      c.classList.toggle('active', c.dataset.f === q);
+    });
+  }
+
+  function switchTab(k) {
+    if (k === cur) return;
+    if (FRIDGE_MODE) setFridge(false);
+    TABST[cur].q = $q.value;
+    cur = k;
+    document.querySelectorAll('.tab').forEach(function (t) {
+      t.classList.toggle('active', t.dataset.t === k);
+    });
+    var d = DICTS[k];
+    $q.value = TABST[k].q;
+    $q.placeholder = d.placeholder;
+    $hint.innerHTML = d.hint;
+    updateExtra();
+    runQuery();
+    // 切换动画：内容区依次淡入上滑
+    ['extra', 'card', 'meta', 'results'].forEach(function (id, i) {
+      var el = document.getElementById(id);
+      el.classList.remove('tab-fade');
+      void el.offsetWidth;
+      el.style.animationDelay = (i * 45) + 'ms';
+      el.classList.add('tab-fade');
+    });
+  }
+
+  function rowEl(d, idx, open) {
+    var it = d.items[idx];
+    var raw = $q.value.trim();
+    var el = document.createElement('div');
+    el.className = 'item' + (open ? ' open' : '');
+    el.dataset.i = idx;
+    el.innerHTML =
+      '<div class="head">' + d.head(it, raw) +
+        '<span class="arrow">▶</span>' + starHTML(d.key, it[0]) +
+      '</div>' +
+      '<div class="body">' + d.body(it, idx) + '</div>';
+    el.querySelector('.head').addEventListener('click', function () { el.classList.toggle('open'); });
+    return el;
+  }
+
+  /* ================= 菜谱份量与热量估算 ================= */
+  function portionCalc(it, unit) {
+    var w = portionWeight(it, unit || PORTION);
+    return { w: w, kcal: Math.round(w * dishDensity(it) / 100 / 10) * 10 };
+  }
+  function portionLine(it) {
+    return '<div class="sec"><span class="lab l-exc">份 量</span>' +
+      '<span class="txt">' + P_LABEL[PORTION] + ' · ' + portionEstimate(it) + '</span>' +
+      '<button class="padd" data-dish="' + esc(it[0]) + '" title="按当前份量记入今日控糖">＋记入今天</button></div>';
+  }
+  function portionWeight(it, unit) {
+    var cat = it[2];
+    if (unit === 'small') return cat === '汤羹' ? 250 : 120;
+    if (unit === 'bowl') return cat === '汤羹' ? 500 : 250;
+    if (cat === '汤羹' || cat === '蒸菜') return 400;
+    if (cat === '甜点饮品') return 200;
+    return 300;
+  }
+  // 按菜系做法粗估每100克的能量密度（千卡）
+  function dishDensity(it) {
+    var cat = it[2], name = it[0], text = it[0] + it[4] + it[5];
+    if (cat === '甜点饮品') return 200;
+    if (cat === '汤羹' || /汤$/.test(name)) {
+      return /排骨|牛|羊|鸭|猪蹄|鸡/.test(name) ? 90 : 50;
+    }
+    if (/粥/.test(name)) return 55;
+    if (cat === '主食') return /炒|河粉|烩|焖/.test(text) ? 170 : 135;
+    if (/拔丝|锅包|酥|炸/.test(text)) return 250;
+    if (/红烧|糖醋|油焖|回锅|干煸|咖喱|水煮|鱼香|麻辣/.test(text)) return 185;
+    if (/清蒸|白灼|蒸蛋/.test(text)) return 110;
+    if (cat === '凉菜' || /凉拌/.test(text)) {
+      return /鸡|肉|牛/.test(it[0] + it[4]) ? 160 : 60;
+    }
+    return /肉|鸡|鸭|鱼|虾|排骨|牛|羊|蛋/.test(it[4]) ? 140 : 90;
+  }
+  function portionEstimate(it, unit) {
+    var c = portionCalc(it, unit);
+    return '约 ' + c.w + ' 克 · 约 ' + c.kcal + ' 千卡';
+  }
+  // 顶部份量条：选一次全局生效，所有菜谱按此份量重新估算
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.pbtn') : null;
+    if (!b || !b.dataset.u || !P_LABEL[b.dataset.u]) return;
+    PORTION = b.dataset.u;
+    try { localStorage.setItem('recipe_portion', PORTION); } catch (err) {}
+    $extra.querySelectorAll('.pbtn').forEach(function (x) { x.classList.toggle('on', x === b); });
+    runQuery();
+  });
+  // 菜谱卡片上的「＋记入今天」：打开面板并填入菜名，餐次由用户在面板里选
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest ? e.target.closest('.padd') : null;
+    if (!a || !a.dataset.dish) return;
+    openDiary();
+    var inp = document.getElementById('dia-add');
+    if (inp) { inp.value = a.dataset.dish; inp.focus(); inp.select(); }
+  });
+
+  /* ================= 成语接龙 ================= */
+  var ID_FIRST = {};
+  IDIOMS.forEach(function (it, i) {
+    var c = it[0].charAt(0);
+    if (!ID_FIRST[c]) ID_FIRST[c] = [];
+    ID_FIRST[c].push(i);
+  });
+  var jlChain = [], jlNote = '', jlHintOn = false;
+  function jlLast() { return jlChain[jlChain.length - 1].w; }
+  function jlTail() { return jlLast().charAt(jlLast().length - 1); }
+  function jlCands() {
+    return (ID_FIRST[jlTail()] || []).filter(function (i) {
+      return jlChain.every(function (e) { return e.w !== IDIOMS[i][0]; });
+    });
+  }
+  function jlStart() {
+    for (var t = 0; t < 30; t++) {
+      var w = IDIOMS[Math.floor(Math.random() * IDIOMS.length)][0];
+      var c = w.charAt(w.length - 1);
+      if ((ID_FIRST[c] || []).length >= 2) { jlChain = [{ w: w, who: 'sys' }]; break; }
+    }
+    if (!jlChain.length) jlChain = [{ w: IDIOMS[Math.floor(Math.random() * IDIOMS.length)][0], who: 'sys' }];
+    jlNote = '系统出了「' + jlLast() + '」，轮到你接';
+    jlHintOn = false;
+  }
+  function jlAppend(w, who) {
+    jlChain.push({ w: w, who: who });
+    jlNote = '';
+    jlHintOn = false;
+  }
+  function jlMsg(m) { jlNote = m; jlRender(); }
+  function jlAccept() {
+    var inp = document.getElementById('jlInput');
+    var w = ((inp && inp.value) || '').trim();
+    if (!w) return;
+    if (wordIdx.idiom[w] === undefined) { jlMsg('词典里没有「' + w + '」，检查一下或点 💡 提示'); return; }
+    if (w.charAt(0) !== jlTail()) { jlMsg('要用「' + jlTail() + '」开头哦'); return; }
+    if (jlChain.some(function (e) { return e.w === w; })) { jlMsg('「' + w + '」这条已经接过啦'); return; }
+    jlUserMove(w);
+  }
+  function jlUserMove(w) {   // 你接完后，系统自动回敬一条
+    jlAppend(w, 'me');
+    var cands = jlCands();
+    if (!cands.length) {
+      jlNote = '🎉 「' + w + '」把系统难住了，你赢啦！点 🔄 再来一局';
+      jlRender();
+      return;
+    }
+    var sysW = IDIOMS[cands[Math.floor(Math.random() * cands.length)]][0];
+    jlAppend(sysW, 'sys');
+    if (!jlCands().length) {
+      jlNote = '🤖 系统接了「' + sysW + '」。以「' + jlTail() + '」开头的成语没有了，点 🔄 重开';
+    } else {
+      jlNote = '🤖 系统接了「' + sysW + '」，轮到你接「' + jlTail() + '」';
+    }
+    jlRender();
+  }
+  function jlBot() {         // 🤖 替我接：系统替你走一步，再自己回应一步
+    var cands = jlCands();
+    if (!cands.length) { jlMsg('「' + jlTail() + '」真的接不上了，点 🔄 重开吧'); return; }
+    var my = IDIOMS[cands[Math.floor(Math.random() * cands.length)]][0];
+    jlAppend(my, 'me');
+    var cands2 = jlCands();
+    if (!cands2.length) {
+      jlNote = '🤖 替你接了「' + my + '」，正好把系统难住啦！点 🔄 再来一局';
+      jlRender();
+      return;
+    }
+    var sysW = IDIOMS[cands2[Math.floor(Math.random() * cands2.length)]][0];
+    jlAppend(sysW, 'sys');
+    if (!jlCands().length) {
+      jlNote = '🤖 替你接了「' + my + '」，系统回了「' + sysW + '」（接下来接不上了），点 🔄 重开';
+    } else {
+      jlNote = '🤖 替你接了「' + my + '」，系统回了「' + sysW + '」，轮到你接「' + jlTail() + '」';
+    }
+    jlRender();
+  }
+  function jlInit() {
+    if (!jlChain.length) jlStart();
+    jlRender();
+  }
+  function jlRender() {
+    var card = document.getElementById('jlCard');
+    if (!card) return;
+    var tail = jlTail();
+    var lastWho = jlChain[jlChain.length - 1].who;
+    var cands = jlCands();
+    var dead = cands.length === 0 && lastWho === 'sys';
+    var meCnt = jlChain.filter(function (e) { return e.who === 'me'; }).length;
+    var chainHtml = jlChain.map(function (e) {
+      var tc = e.w.charAt(e.w.length - 1);
+      return '<button class="chip wchip jl-link' + (e.who === 'me' ? ' jl-me' : '') + '" data-w="' + esc(e.w) +
+        '" title="' + (e.who === 'me' ? '你接的' : '系统接的') + '，点击查看释义">' + esc(e.w) + '</button>' +
+        '<button class="jl-head" data-h="' + esc(tc) + '" title="查看以「' + esc(tc) + '」开头的所有成语">接' + esc(tc) + '↗</button>';
+    }).join('<span class="jl-arrow">→</span>');
+    var hintHtml = '';
+    if (jlHintOn) {
+      hintHtml = '<div class="jl-hints">试试：' + cands.slice(0, 6).map(function (i) {
+        return '<button class="chip wchip jl-pick" data-w="' + esc(IDIOMS[i][0]) + '" title="点击采用这条">' + esc(IDIOMS[i][0]) + '</button>';
+      }).join('') + (cands.length > 6 ? '　<span style="color:#a2987f">…可选项共 ' + cands.length + ' 条</span>' : '') + '</div>';
+    }
+    card.innerHTML =
+      '<div class="fav-top"><h2>🔗 成语接龙</h2><span class="dia-date">共 ' + jlChain.length + ' 条 · 你 ' + meCnt + ' / 系统 ' +
+        (jlChain.length - meCnt) + ' · 红框是你接的 · 点成语查释义</span></div>' +
+      '<div class="jl-chain">' + chainHtml + '</div>' +
+      '<div class="jl-need">' + (lastWho === 'sys' ? '轮到你：接' : '系统回合：接') +
+        '<span class="jl-char">' + esc(tail) + '</span> 开头的成语' +
+        (dead ? '　<span class="st">—— 这个字接不下去了！</span>' : '') + '</div>' +
+      (jlHintOn ? hintHtml : '') +
+      '<div class="jl-row">' +
+        '<input id="jlInput" class="rsel" style="flex:1;min-width:150px" placeholder="输入以「' + esc(tail) + '」开头的成语">' +
+        '<button id="jlGo" class="gchip">接！</button>' +
+        '<button id="jlBot" class="gchip">🤖 替我接</button>' +
+        '<button id="jlHint" class="gchip">💡 提示</button>' +
+        '<button id="jlNew" class="gchip">🔄 重开</button>' +
+      '</div>' +
+      (jlNote ? '<div class="jl-note">' + esc(jlNote) + '</div>' : '');
+    var inp = document.getElementById('jlInput');
+    if (inp) inp.focus();
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    if (e.target.closest('#jlGo')) { jlAccept(); return; }
+    if (e.target.closest('#jlNew')) { jlStart(); jlRender(); return; }
+    if (e.target.closest('#jlBot')) { jlBot(); return; }
+    if (e.target.closest('#jlHint')) { jlHintOn = !jlHintOn; jlRender(); return; }
+    var pick = e.target.closest('.jl-pick');
+    if (pick) { jlUserMove(pick.dataset.w); return; }
+    var link = e.target.closest('.jl-link');
+    if (link) { $q.value = link.dataset.w; runQuery(); }
+    var hd = e.target.closest('.jl-head');
+    if (hd) { $q.value = hd.dataset.h; runQuery(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && e.target.id === 'jlInput' && e.key === 'Enter') jlAccept();
+  });
+
+  /* ================= 今日控糖（餐点日记） ================= */
+  var $diaOverlay = document.getElementById('diaOverlay');
+  var $diaPanel = document.getElementById('diaPanel');
+  var DIA_KEY = 'sugar_diary';
+  var MEALS = [['bf', '早餐'], ['lc', '午餐'], ['dn', '晚餐'], ['sk', '加餐']];
+  var diary = null;
+  try { diary = JSON.parse(localStorage.getItem(DIA_KEY) || 'null'); } catch (e) { diary = null; }
+  if (!diary || typeof diary !== 'object' || !diary.meals) diary = { budget: 1800, meals: {} };
+  if (!(diary.budget >= 800 && diary.budget <= 5000)) diary.budget = 1800;
+
+  function diaToday() {
+    var t = new Date();
+    return t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate();
+  }
+  function saveDiary() {
+    diary.date = diaToday();
+    try { localStorage.setItem(DIA_KEY, JSON.stringify(diary)); } catch (e) {}
+  }
+  function diaRoll() {          // 跨天自动清空餐点，保留热量上限设置
+    if (diary.date !== diaToday()) { diary.meals = {}; saveDiary(); }
+  }
+  function diaTotals() {
+    var kcal = 0, n = 0;
+    MEALS.forEach(function (m) {
+      (diary.meals[m[0]] || []).forEach(function (x) { kcal += x.kcal; n++; });
+    });
+    return { kcal: kcal, n: n };
+  }
+  function diaMealByTime() {   // 仅作添加栏的默认预选，用户可点餐次切换
+    var h = new Date().getHours();
+    return h < 10 ? 'bf' : (h < 15 ? 'lc' : (h < 21 ? 'dn' : 'sk'));
+  }
+  var diaTarget = 'lc';
+  function openDiary() { diaRoll(); diaTarget = diaMealByTime(); renderDiary(); $diaOverlay.classList.add('show'); }
+  function closeDiary() { $diaOverlay.classList.remove('show'); }
+
+  function diaAdd() {
+    var inp = document.getElementById('dia-add');
+    var name = (inp ? inp.value : '').trim();
+    if (!name) { if (inp) inp.focus(); return; }
+    var hit = null, i;
+    for (i = 0; i < RECIPES.length; i++) if (RECIPES[i][0] === name) { hit = RECIPES[i]; break; }
+    if (!hit) for (i = 0; i < RECIPES.length; i++) if (RECIPES[i][0].indexOf(name) >= 0) { hit = RECIPES[i]; break; }
+    if (!hit) {
+      if (inp) { inp.value = ''; inp.placeholder = '没找到「' + name + '」，换个菜名试试'; }
+      return;
+    }
+    var c = portionCalc(hit);
+    (diary.meals[diaTarget] = diary.meals[diaTarget] || []).push({ n: hit[0], w: c.w, kcal: c.kcal });
+    saveDiary();
+    renderDiary();
+    var again = document.getElementById('dia-add');
+    if (again) again.focus();
+  }
+
+  function exportMenu() {
+    var t = diaTotals();
+    var lines = ['今日点菜单 · ' + diaToday(), '每日热量上限：' + diary.budget + ' 千卡', ''];
+    var i = 0;
+    MEALS.forEach(function (m) {
+      var arr = diary.meals[m[0]] || [];
+      if (!arr.length) return;
+      lines.push('【' + m[1] + '】');
+      arr.forEach(function (x) {
+        i++;
+        lines.push(i + '. ' + x.n + '　约 ' + x.w + ' 克 · 约 ' + x.kcal + ' 千卡');
+      });
+    });
+    lines.push('');
+    lines.push('合计 ' + i + ' 道菜 · 约 ' + t.kcal + ' 千卡 / 上限 ' + diary.budget + ' 千卡' +
+      (t.kcal > diary.budget ? '（已超）' : '（剩余 ' + (diary.budget - t.kcal) + ' 千卡）'));
+    lines.push('—— 百科盒 BaikeBox · 热量为家常估算，仅供参考');
+    var blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '今日点菜单-' + (new Date().getMonth() + 1) + '月' + new Date().getDate() + '日.txt';
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+  }
+
+  function renderDiary() {
+    var tot = diaTotals(), rem = diary.budget - tot.kcal;
+    var pct = Math.min(100, Math.max(0, Math.round(tot.kcal / diary.budget * 100)));
+    var fill = tot.kcal > diary.budget ? 'hot' : (pct >= 80 ? 'warn' : '');
+    var dishes = RECIPES.map(function (it) { return '<option value="' + esc(it[0]) + '">'; }).join('');
+    var menuLines = [], mCnt = 0, mGram = 0;
+    MEALS.forEach(function (m) {
+      var arr = diary.meals[m[0]] || [];
+      if (!arr.length) return;
+      menuLines.push('<div class="dia-meal-line"><b>' + m[1] + '</b></div>');
+      arr.forEach(function (x) {
+        mCnt++; mGram += x.w;
+        menuLines.push('<div class="dia-meal-line">' + mCnt + '. ' + esc(x.n) +
+          '<span class="mk">约 ' + x.w + ' 克 · ' + x.kcal + ' 千卡</span></div>');
+      });
+    });
+    var menuHtml = '<div class="dia-menu"><div class="dia-menu-top"><h3>📋 今日点菜单</h3>' +
+        (mCnt ? '<button id="diaExport">⬇ 导出文本</button>' : '') + '</div>' +
+      (mCnt ? menuLines.join('') +
+          '<div class="dia-menu-total">合计 ' + mCnt + ' 道菜 · 约 ' + mGram + ' 克 · ' + tot.kcal + ' 千卡' +
+          (rem >= 0 ? '（剩余 ' + rem + ' 千卡）' : '（已超 ' + (-rem) + ' 千卡）') + '</div>'
+        : '<div class="dia-menu-empty">今天还没点菜——在下方输入菜名，或点菜谱卡片里的「＋记入今天」</div>') +
+      '</div>';
+    var mealHtml = MEALS.map(function (m) {
+      var arr = diary.meals[m[0]] || [], mk = 0;
+      arr.forEach(function (x) { mk += x.kcal; });
+      var items = arr.map(function (x, i) {
+        return '<div class="dia-item"><span>' + esc(x.n) + '</span>' +
+          '<span class="k">' + x.w + ' 克 · ' + x.kcal + ' 千卡</span>' +
+          '<button class="dia-x" data-m="' + m[0] + '" data-i="' + i + '" title="删除这条">✕</button></div>';
+      }).join('');
+      return '<div class="dia-meal"><h3>' + m[1] + '</h3><span class="mtot">' +
+          (mk ? '共 ' + mk + ' 千卡' : '还没记录') + '</span>' + items + '</div>';
+    }).join('');
+    var addBar = '<div class="dia-add"><input id="dia-add" list="diaDishes" autocomplete="off" ' +
+        'placeholder="输入菜名，如 糖醋排骨">' +
+      '<span class="mchips">' + MEALS.map(function (m) {
+        return '<button class="pbtn mchip' + (m[0] === diaTarget ? ' on' : '') + '" data-m="' + m[0] + '">' + m[1] + '</button>';
+      }).join('') + '</span>' +
+      '<button id="diaAddBtn">添加</button></div>';
+    $diaPanel.innerHTML =
+      '<div class="fav-top"><h2>🍬 今日控糖</h2>' +
+        '<span class="dia-date">' + diaToday() + ' · 每天零点自动清零</span>' +
+        '<button class="xbtn" id="diaClose" title="关闭">✕</button></div>' +
+      '<div class="dia-budget">每日热量上限' +
+        '<input id="diaBudget" type="number" min="800" max="5000" step="50" value="' + diary.budget + '">千卡' +
+        '<button id="diaBudgetBtn">保存</button></div>' +
+      '<div class="dia-big">' + (rem >= 0 ?
+          '剩余可分配 <span class="num">' + rem + '</span> 千卡' :
+          '<span class="num">已超 ' + (-rem) + '</span> 千卡') +
+        ' · 已吃 ' + tot.kcal + ' / ' + diary.budget + ' 千卡（' + tot.n + ' 笔）</div>' +
+      '<div class="dia-track"><div class="dia-fill ' + fill + '" style="width:' + pct + '%"></div></div>' +
+      menuHtml +
+      addBar +
+      mealHtml +
+      '<datalist id="diaDishes">' + dishes + '</datalist>' +
+      '<div class="dia-note">热量按菜谱页顶部所选份量（当前「' + P_LABEL[PORTION] + '」）与家常做法粗估，仅供参考；' +
+        '控糖期间每日总热量与三餐分配请遵医嘱或咨询营养师。</div>';
+
+    document.getElementById('diaClose').addEventListener('click', closeDiary);
+    var exp = document.getElementById('diaExport');
+    if (exp) exp.addEventListener('click', exportMenu);
+    document.getElementById('diaBudgetBtn').addEventListener('click', function () {
+      var v = parseInt(document.getElementById('diaBudget').value, 10);
+      if (v >= 800 && v <= 5000) { diary.budget = v; saveDiary(); }
+      renderDiary();
+    });
+    var addBtn = document.getElementById('diaAddBtn');
+    if (addBtn) addBtn.addEventListener('click', diaAdd);
+    var addInp = document.getElementById('dia-add');
+    if (addInp) addInp.addEventListener('keydown', function (e) { if (e.key === 'Enter') diaAdd(); });
+    $diaPanel.querySelectorAll('.mchip').forEach(function (c) {
+      c.addEventListener('click', function () {
+        diaTarget = c.dataset.m;
+        $diaPanel.querySelectorAll('.mchip').forEach(function (x) { x.classList.toggle('on', x === c); });
+      });
+    });
+    $diaPanel.querySelectorAll('.dia-x').forEach(function (x) {
+      x.addEventListener('click', function () {
+        var arr = diary.meals[x.dataset.m] || [];
+        arr.splice(+x.dataset.i, 1);
+        saveDiary();
+        renderDiary();
+      });
+    });
+  }
+  $diaOverlay.addEventListener('click', function (e) { if (e.target === $diaOverlay) closeDiary(); });
+
+  /* ================= 冰箱模式（按食材找菜） ================= */
+  function normIng(t) {
+    return t.replace(/[0-9零一二两三四五六七八九十百半]+[大小]?(克|g|G|斤|两|毫升|ml|ML|个|只|条|根|片|颗|罐|把|勺|碗|朵|瓣|块|包|盒|杯|张|枚|段|滴|撮)/g, '')
+      .replace(/适量|少许|若干/g, '').trim();
+  }
+  function parseIng(s) {
+    var out = [];
+    s.split('、').forEach(function (t) {
+      t = normIng(t.trim());
+      if (t && out.indexOf(t) < 0) out.push(t);
+    });
+    return out;
+  }
+  var ING_LIST = [], ING_MAP = {};
+  RECIPES.forEach(function (it, i) {
+    parseIng(it[4]).forEach(function (g) {
+      if (!ING_MAP[g]) { ING_MAP[g] = []; ING_LIST.push(g); }
+      if (ING_MAP[g].indexOf(i) < 0) ING_MAP[g].push(i);
+    });
+  });
+  ING_LIST.sort(function (a, b) { return ING_MAP[b].length - ING_MAP[a].length; });
+  var ING_SYN = {
+    '西红柿': ['番茄'], '番茄': ['西红柿'],
+    '土豆': ['马铃薯', '洋芋'], '马铃薯': ['土豆'], '洋芋': ['土豆'],
+    '卷心菜': ['包菜', '圆白菜'], '包菜': ['卷心菜', '圆白菜'], '圆白菜': ['包菜', '卷心菜'],
+    '青椒': ['菜椒', '甜椒', '柿子椒'], '菜椒': ['青椒'], '柿子椒': ['青椒'],
+    '蒜苗': ['青蒜'], '青蒜': ['蒜苗'],
+    '鸡蛋': ['蛋清', '蛋白'], '蛋清': ['鸡蛋', '蛋白'], '蛋白': ['蛋清', '鸡蛋'],
+    '瘦猪肉': ['猪里脊', '里脊'], '猪里脊': ['瘦肉'],
+    '白糖': ['糖', '砂糖'], '冰糖': ['糖'], '红糖': ['糖']
+  };
+
+  function ingBarHTML() {
+    return '<div class="ingbar"><span class="plab">食 材</span>' +
+      '<input id="ingFilter" autocomplete="off" placeholder="搜食材，如 排骨">' +
+      '<button class="gchip" data-c="1">清空</button>' +
+      '<button class="gchip" data-x="1">✕ 退出冰箱模式</button>' +
+      '<div id="ingchips" class="ingchips"></div></div>';
+  }
+  function renderIngChips(f) {
+    var box = document.getElementById('ingchips');
+    if (!box) return;
+    f = (f || '').trim();
+    var html = Object.keys(FRIDGE_SEL).map(function (g) {
+      return '<button class="gchip active" data-g="' + esc(g) + '">' + esc(g) + '</button>';
+    }).join('');
+    var shown = 0, MAX = f ? 80 : 48;
+    for (var i = 0; i < ING_LIST.length && shown < MAX; i++) {
+      var g = ING_LIST[i];
+      if (FRIDGE_SEL[g]) continue;
+      if (f && g.indexOf(f) < 0) {
+        var syns = ING_SYN[g] || [], hitS = false;
+        for (var y = 0; y < syns.length; y++) if (syns[y].indexOf(f) >= 0) { hitS = true; break; }
+        if (!hitS) continue;
+      }
+      html += '<button class="gchip" data-g="' + esc(g) + '">' + esc(g) + '<i>' + ING_MAP[g].length + '</i></button>';
+      shown++;
+    }
+    if (!f) html += '<span class="ingnote">共 ' + ING_LIST.length + ' 种食材，可搜索筛选，数字 = 用到它的菜数</span>';
+    box.innerHTML = html;
+  }
+  function setFridge(on) {
+    if (FRIDGE_MODE === on) return;
+    FRIDGE_MODE = on;
+    if (!on) FRIDGE_SEL = {};
+    var b = document.getElementById('fridgeBtn');
+    if (b) { b.classList.toggle('on', on); b.innerHTML = on ? '🥕 退出冰箱' : '🥕 冰箱模式'; }
+    document.querySelector('.searchbar').style.display = on ? 'none' : '';
+    $hint.innerHTML = on ? '冰箱模式：点选你<b>有</b>的食材，马上看能做什么、还缺什么' : DICTS[cur].hint;
+    updateExtra();
+    runQuery();
+  }
+  function ingMatch(t, sel) {
+    for (var x = 0; x < sel.length; x++) {
+      var cands = ING_SYN[sel[x]] || [];
+      for (var y = 0; y < cands.length; y++) {
+        var s = cands[y];
+        if (t.indexOf(s) >= 0 || s.indexOf(t) >= 0) return true;
+      }
+      if (t.indexOf(sel[x]) >= 0 || sel[x].indexOf(t) >= 0) return true;
+    }
+    return false;
+  }
+  function runFridge(st) {
+    var sel = Object.keys(FRIDGE_SEL);
+    if (!sel.length) {
+      showWelcome();
+      $meta.innerHTML = '<span style="color:#a2987f">↑ 点选你有的食材（可多选），马上告诉你能做什么</span>';
+      $results.innerHTML = '';
+      $more.style.display = 'none';
+      return;
+    }
+    var rows = [];
+    RECIPES.forEach(function (it, i) {
+      var toks = parseIng(it[4]);
+      var have = 0;
+      toks.forEach(function (t) { if (ingMatch(t, sel)) have++; });
+      if (have > 0) rows.push([have, have / toks.length, i]);
+    });
+    rows.sort(function (a, b) { return b[0] - a[0] || b[1] - a[1] || a[2] - b[2]; });
+    st.shown = rows.map(function (r) { return r[2]; });
+    st.rendered = 0;
+    $meta.innerHTML = st.shown.length ?
+      '用你选的 <b>' + sel.length + '</b> 样食材能做 <b>' + st.shown.length + '</b> 道菜（先列用得最多的，绿色=食材全齐）' :
+      '<span style="color:#a2987f">这几样食材组合做不出菜谱里的菜，再添几样或换几样试试</span>';
+    renderResults();
+    $results.firstChild && $results.firstChild.scrollIntoView({ block: 'nearest' });
+  }
+  function annotateFridge(from, to) {
+    var sel = Object.keys(FRIDGE_SEL);
+    for (var k = from; k < to; k++) {
+      var el = $results.children[k];
+      if (!el || !el.dataset.i) continue;
+      var missToks = [];
+      parseIng(RECIPES[+el.dataset.i][4]).forEach(function (t) {
+        if (!ingMatch(t, sel)) missToks.push(t);
+      });
+      var miss = missToks.length;
+      el.querySelector('.arrow').insertAdjacentHTML('beforebegin',
+        '<span class="chip ' + (miss ? 'r-high' : 'r-low') + '">' + (miss ? '缺 ' + miss + ' 样' : '食材全齐') + '</span>');
+      if (miss) el.querySelector('.body').insertAdjacentHTML('afterbegin',
+        '<div class="sec"><span class="lab l-exc">还 缺</span><span class="txt">' + esc(missToks.join('、')) + '</span></div>');
+    }
+  }
+  // 冰箱模式按钮 + 食材 chip 点击（委托，随 extra 重渲染可用）
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    if (e.target.closest('#fridgeBtn')) { setFridge(!FRIDGE_MODE); return; }
+    var c = e.target.closest('.gchip');
+    if (!c) return;
+    if (c.dataset.x) { setFridge(false); return; }
+    if (c.dataset.c) { FRIDGE_SEL = {}; renderIngChips(''); runQuery(); return; }
+    var g = c.dataset.g;
+    if (!g) return;
+    if (FRIDGE_SEL[g]) delete FRIDGE_SEL[g]; else FRIDGE_SEL[g] = 1;
+    c.classList.toggle('active', !!FRIDGE_SEL[g]);
+    runQuery();
+  });
+
+  /* ================= 图片灯箱（点图逐级放大，点背景逐级缩小，最小约1/4） ================= */
+  var $imgZoom = document.getElementById('imgZoom');
+  var ZOOM_STEPS = [0.25, 0.5, 1, 1.6, 2.4, 3.4];   // 相对适配屏幕的倍率，1 = 原始展示
+  var zoomLevel = 2;
+  function zoomApply(originX, originY) {
+    var img = document.getElementById('imgZoomImg');
+    img.style.transformOrigin = (originX === undefined ? 50 : originX) + '% ' + (originY === undefined ? 50 : originY) + '%';
+    img.style.transform = 'scale(' + ZOOM_STEPS[zoomLevel] + ')';
+    document.getElementById('zoomHint').textContent =
+      '× ' + ZOOM_STEPS[zoomLevel] + '　点图片放大（以点击处为中心）· 点背景缩小 · Esc 关闭';
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest) return;
+    if ($imgZoom.classList.contains('show')) {
+      if (e.target.closest('#zoomX')) { $imgZoom.classList.remove('show'); return; }
+      var img = document.getElementById('imgZoomImg');
+      if (e.target === img) {                       // 点图片：放大一档，以点击处为中心
+        if (zoomLevel < ZOOM_STEPS.length - 1) {
+          zoomLevel++;
+          var r = img.getBoundingClientRect();
+          zoomApply(
+            Math.max(0, Math.min(100, (e.clientX - r.left) / r.width * 100)),
+            Math.max(0, Math.min(100, (e.clientY - r.top) / r.height * 100)));
+        }
+        return;
+      }
+      if (zoomLevel > 0) { zoomLevel--; zoomApply(); return; }   // 点背景：缩小一档
+      return;
+    }
+    var im = e.target.closest('.dthumb');
+    if (!im) return;
+    document.getElementById('imgZoomImg').src = im.getAttribute('src');
+    zoomLevel = 2;
+    zoomApply();
+    $imgZoom.classList.add('show');
+  });
+
+  // 详情图右上角按钮：默认小图靠右，点「放 大」还原全宽
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.dsmall') : null;
+    if (!b) return;
+    e.stopPropagation();
+    var wrap = b.closest('.dwrap');
+    if (!wrap) return;
+    wrap.classList.toggle('big');
+    b.textContent = wrap.classList.contains('big') ? '缩 小' : '放 大';
+  });
+
+  document.addEventListener('click', function (e) {   // 英汉「类型」筛选：全部/单词/词组
+    if (!e.target.closest) return;
+    var c = e.target.closest('.tchip');
+    if (!c) return;
+    ENG_F = c.dataset.t || '';
+    $extra.querySelectorAll('.tchip').forEach(function (x) { x.classList.toggle('active', x === c); });
+    runQuery();
+  });
+
+  document.addEventListener('click', function (e) {   // 术语「领域」筛选
+    if (!e.target.closest) return;
+    var c = e.target.closest('.dchip');
+    if (!c) return;
+    TERM_F = c.dataset.d || '';
+    $extra.querySelectorAll('.dchip').forEach(function (x) { x.classList.toggle('active', x === c); });
+    runQuery();
+  });
+
+  document.addEventListener('click', function (e) {   // 心理学「分类」筛选
+    if (!e.target.closest) return;
+    var c = e.target.closest('.ychip');
+    if (!c) return;
+    PSY_F = c.dataset.d || '';
+    $extra.querySelectorAll('.ychip').forEach(function (x) { x.classList.toggle('active', x === c); });
+    runQuery();
+  });
+
+  function search(d, q) {
+    q = q.trim().toLowerCase();
+    if (!q) return null;
+    var isAscii = /^[a-z0-9 '\-]+$/.test(q);
+    var nq = normPy(q);
+    var items = d.items;
+    var hits = [];
+    for (var i = 0; i < items.length; i++) {
+      var s = d.score(items[i], i, q, nq, isAscii);
+      if (s > 0) hits.push([s, i]);
+    }
+    hits.sort(function (a, b) { return b[0] - a[0] || a[1] - b[1]; });
+    return hits.map(function (h) { return h[1]; });
+  }
+
+  function renderResults() {
+    var st = TABST[cur];
+    $results.innerHTML = '';
+    var n = Math.min(st.rendered + PAGE, st.shown.length);
+    var d = DICTS[cur];
+    var from = st.rendered;
+    for (var k = from; k < n; k++) $results.appendChild(rowEl(d, st.shown[k], false));
+    st.rendered = n;
+    if (FRIDGE_MODE && cur === 'recipe') annotateFridge(from, n);
+    $more.style.display = st.rendered < st.shown.length ? 'block' : 'none';
+  }
+
+  function runQuery() {
+    var d = DICTS[cur], st = TABST[cur];
+    st.q = $q.value;
+    refreshFilters();
+    $card.innerHTML = '';
+    if (FRIDGE_MODE && cur === 'recipe') { runFridge(st); return; }
+    if (cur === 'term' && !$q.value.trim() && TERM_F) {
+      var tl = [];
+      for (var ti = 0; ti < TERMS.length; ti++) if (TERMS[ti][2] === TERM_F) tl.push(ti);
+      st.shown = tl;
+      st.rendered = 0;
+      $meta.innerHTML = '「' + esc(TERM_F) + '」领域共 <b>' + tl.length + '</b> 条术语';
+      renderResults();
+      return;
+    }
+    if (cur === 'psy' && !$q.value.trim() && PSY_F) {
+      var pl = [];
+      for (var pi = 0; pi < PSY.length; pi++) if (PSY[pi][2] === PSY_F) pl.push(pi);
+      st.shown = pl;
+      st.rendered = 0;
+      $meta.innerHTML = '「' + esc(PSY_F) + '」分类共 <b>' + pl.length + '</b> 条词条';
+      renderResults();
+      return;
+    }
+    if (cur === 'eng' && !$q.value.trim() && ENG_F) {
+      var el = [];
+      for (var ei = 0; ei < ENG.length; ei++) {
+        if (ENG_F === 'word' ? !isPhrase(ENG[ei]) : isPhrase(ENG[ei])) el.push(ei);
+      }
+      st.shown = el;
+      st.rendered = 0;
+      $meta.innerHTML = (ENG_F === 'phrase' ? '共 <b>' + el.length + '</b> 个词组' : '共 <b>' + el.length + '</b> 个单词') + '（按常用度排序，点击展开）';
+      renderResults();
+      return;
+    }
+    if (cur === 'rare' && !$q.value.trim() && (RARE_F.r || RARE_F.s || RARE_F.p1 || RARE_F.p2)) {
+      var all = [];
+      for (var ri = 0; ri < RARE.length; ri++) {
+        var sc = rareScore(RARE[ri]);
+        if (sc > 0) all.push([sc, RARE[ri][3], ri]);
+      }
+      all.sort(function (a, b) { return b[0] - a[0] || a[1] - b[1] || a[2] - b[2]; });
+      st.shown = all.map(function (x) { return x[2]; });
+      st.rendered = 0;
+      $meta.innerHTML = '筛得 <b>' + all.length + '</b> 字（匹配度优先，同分按笔画排序）';
+      renderResults();
+      return;
+    }
+    var idx = search(d, $q.value);
+    if (idx === null) { showWelcome(); return; }
+    st.shown = idx;
+    st.rendered = 0;
+    if (!st.shown.length) {
+      $meta.innerHTML = d.emptyMsg;
+      $results.innerHTML = '';
+      $more.style.display = 'none';
+      return;
+    }
+    $meta.innerHTML = '共找到 <b>' + st.shown.length.toLocaleString() + '</b> 条' +
+      (st.shown.length > PAGE ? '（先显示 ' + PAGE + ' 条，点击结果可展开）' : '，点击可展开');
+    renderResults();
+    if (st.shown.length === 1 && d.items[st.shown[0]][0].toLowerCase() === $q.value.trim().toLowerCase()) {
+      $results.firstChild.classList.add('open');
+    }
+  }
+
+  function showCard(d, idx, tag) {
+    var it = d.items[idx];
+    $card.innerHTML = '<div class="feature-card"><div class="tag">' + tag + '</div>' +
+      starHTML(d.key, it[0]) + d.detail(it, idx) + '</div>';
+  }
+
+  function showWelcome() {
+    var d = DICTS[cur];
+    var t = new Date();
+    var seed = t.getFullYear() * 372 + (t.getMonth() + 1) * 31 + t.getDate();
+    showCard(d, d.todayPick(seed), d.todayLabel(t));
+    $meta.innerHTML = '';
+    $results.innerHTML = '';
+    $more.style.display = 'none';
+  }
+
+  function showRandom() {
+    var d = DICTS[cur];
+    var idx = Math.floor(Math.random() * d.items.length);
+    showCard(d, idx, '随手一翻');
+    $card.firstChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  var timer = null;
+  $q.addEventListener('input', function () {
+    clearTimeout(timer);
+    timer = setTimeout(runQuery, 180);
+  });
+  $q.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { clearTimeout(timer); runQuery(); }
+    if (e.key === 'Escape') { $q.value = ''; runQuery(); $q.blur(); }
+  });
+  document.getElementById('go').addEventListener('click', runQuery);
+  document.getElementById('qClear').addEventListener('click', function () {
+    $q.value = '';
+    runQuery();
+    $q.focus();
+  });
+  document.getElementById('random').addEventListener('click', showRandom);
+  $more.addEventListener('click', renderResults);
+  document.getElementById('favBtn').addEventListener('click', openFav);
+  // 今日控糖按钮在菜谱页顶部份量旁，随 extra 重新渲染，用委托绑定
+  document.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('#diaBtn')) openDiary();
+  });
+
+  // 快捷键
+  document.addEventListener('keydown', function (e) {
+    if ($imgZoom.classList.contains('show')) {
+      if (e.key === 'Escape') $imgZoom.classList.remove('show');
+      return;
+    }
+    var favOpen = $favOverlay.classList.contains('show');
+    var diaOpen = $diaOverlay.classList.contains('show');
+    if (!favOpen && !diaOpen) {
+      if (e.key === '/' && document.activeElement !== $q) { e.preventDefault(); $q.focus(); $q.select(); }
+      return;
+    }
+    if (e.key === 'Escape') { if (diaOpen) closeDiary(); else closeFav(); return; }
+    if (favView === 'review') {
+      if (e.key === ' ') { e.preventDefault(); flipCard(); }
+      else if (e.key === 'ArrowRight') { rvGo(1); }
+      else if (e.key === 'ArrowLeft') { rvGo(-1); }
+    }
+  });
+  $favOverlay.addEventListener('click', function (e) { if (e.target === $favOverlay) closeFav(); });
+
+  // 初始化
+  var d0 = DICTS[cur];
+  $q.placeholder = d0.placeholder;
+  $hint.innerHTML = d0.hint;
+  updateFavBadge();
+  updateExtra();
+  showWelcome();
+})();
+</script>
+</body>
+</html>

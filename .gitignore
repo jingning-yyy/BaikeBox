@@ -1,0 +1,8 @@
+# 网络来源缩略图，仅供本地使用，不入仓库（详见 README「关于图片」）
+images/
+
+# 备份与系统文件
+*.bak
+Thumbs.db
+.DS_Store
+.idea/

@@ -43,19 +43,22 @@ git clone https://github.com/<你的用户名>/BaikeBox.git
 ```
 BaikeBox/
 ├── index.html      主程序（双击打开）
-├── data.js         成语数据库
-├── eng.js          英汉词典数据库
-├── eng_sent.js     英文例句库（Tatoeba）
-├── flowers.js      花语数据库
-├── recipes.js      菜谱数据库
-├── sugar.js        食物含糖量数据库
-├── rare.js         生僻字数据库
-├── decomp.js       生僻字拆分表（CHISE IDS）
-├── terms.js        专业术语数据库
-├── psy.js          心理学词典数据库
-├── thumbs.js       缩略图索引
-├── images/         缩略图（约 40 MB，不入仓库，见下文）
-└── 使用说明.md      完整使用手册
+├── 使用说明.md      完整使用手册
+├── README.md       本文件（另含 LICENSE / CHANGELOG.md）
+└── data/           全部数据
+    ├── data.js     成语数据库
+    ├── js/         其余词典数据
+    │   ├── eng.js      英汉词典数据库
+    │   ├── eng_sent.js 英文例句库（Tatoeba）
+    │   ├── flowers.js  花语数据库
+    │   ├── recipes.js  菜谱数据库
+    │   ├── sugar.js    食物含糖量数据库
+    │   ├── rare.js     生僻字数据库
+    │   ├── decomp.js   生僻字拆分表（CHISE IDS）
+    │   ├── terms.js    专业术语数据库
+    │   ├── psy.js      心理学词典数据库
+    │   └── thumbs.js   缩略图索引
+    └── images/     缩略图（约 40 MB，不入仓库，见下文）
 ```
 
 ## 🙏 数据来源与致谢
@@ -74,7 +77,7 @@ BaikeBox/
 
 菜谱/花卉/控糖的 465 张缩略图来自网络图片搜索，**仅供个人本地查询使用，不适合随仓库再分发**，因此未纳入版本库。不影响使用：页面已做缺图回退，列表与详情正常显示文字。
 
-想要完整缩略图：把 `images/`（recipe / flower / food 三个子目录）放回 BaikeBox 文件夹即可，无需任何配置。
+想要完整缩略图：把 `data/images/`（recipe / flower / food 三个子目录）放回 BaikeBox 的 `data` 文件夹即可，无需任何配置。
 
 ## 📄 许可证
 
